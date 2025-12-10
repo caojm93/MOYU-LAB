@@ -89,15 +89,16 @@ window.closeLeaderboard = function() { lbPanel.classList.add('hidden'); }
 const container = document.getElementById('game-container');
 
 function handleStart(e) {
-    // 🔍 检查：如果点的是输入框或按钮，直接放行，不拦截！
+    // 🔍 白名单检查：
+    // 如果点击的是输入框、按钮、或者那个关闭用的"X"图标
     const tag = e.target.tagName;
-    if (tag === 'INPUT' || tag === 'BUTTON') {
-        return; 
+    if (tag === 'INPUT' || tag === 'BUTTON' || e.target.classList.contains('lb-close')) {
+        return; // 直接放行，让浏览器去处理点击
     }
 
     // 只有点的是背景/游戏区时，才禁止默认行为（防滚动）
     if(e.cancelable) e.preventDefault();
-    if(!lbPanel.classList.contains('hidden')) return; // 排行榜打开时不倒酒
+    if(!lbPanel.classList.contains('hidden')) return; // 排行榜打开时，禁止后面倒酒
 
     if (state === 'PLAYING' && !pouring) {
         pouring = true;
@@ -106,8 +107,9 @@ function handleStart(e) {
 }
 
 function handleEnd(e) {
+    // 🔍 白名单检查：同上
     const tag = e.target.tagName;
-    if (tag === 'INPUT' || tag === 'BUTTON') {
+    if (tag === 'INPUT' || tag === 'BUTTON' || e.target.classList.contains('lb-close')) {
         return; 
     }
 
