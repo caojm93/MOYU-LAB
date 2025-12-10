@@ -10,23 +10,23 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <div id="game-container">
         <div id="hud">SCORE: <span id="score-val">0</span></div>
-        <button id="open-lb-btn">🏆 排行榜</button>
+        
+        <div style="position: absolute; top: 40px; right: 20px; z-index: 5; display: flex; gap: 10px;">
+            <button id="open-lb-btn" class="hud-btn">🏆 排行榜</button>
+            <button id="open-ach-btn" class="hud-btn">💀 成就</button>
+        </div>
 
         <canvas id="gameCanvas"></canvas>
-        
         <div id="controls-hint">按住屏幕倒酒</div>
 
         <div id="start-screen" class="overlay">
             <h1>宫崎英高<br>摸鱼打酒日记</h1>
             <div class="subtitle">Miyazaki's Beer Pouring Diary</div>
-            
             <div class="input-group">
                 <input type="text" id="player-name-input" class="soul-input" placeholder="输入名字 (Enter Name)" maxlength="12">
             </div>
-
             <button id="start-btn" disabled>开始受苦 (START)</button>
         </div>
 
@@ -34,20 +34,40 @@
             <div id="result-text">YOU SPILLED</div>
             <div id="result-detail">分数: 0</div>
             <div id="upload-status" style="margin-bottom: 10px; font-size: 0.8rem; color: #666;"></div>
-            
             <div class="btn-group">
                 <button id="restart-btn">再次传火</button>
                 <button id="check-rank-btn">查看排行</button>
             </div>
         </div>
 
-        <div id="leaderboard-panel" class="hidden">
+        <div id="leaderboard-panel" class="hidden panel-common">
             <div class="lb-header">
                 <span>LEGENDS (全服排行)</span>
-                <span class="lb-close" onclick="closeLeaderboard()">×</span>
+                <span class="lb-close" onclick="closePanel('leaderboard-panel')">×</span>
             </div>
-            <div id="lb-content" class="lb-list">
-                <div class="lb-loading">正在从服务器读取铭文...</div>
+            <div id="lb-content" class="lb-list"></div>
+        </div>
+
+        <div id="achievement-panel" class="hidden panel-common">
+            <div class="lb-header">
+                <span>TROPHIES (受苦记录)</span>
+                <span class="lb-close" onclick="closePanel('achievement-panel')">×</span>
+            </div>
+            <div class="ach-content">
+                <div class="stats-box">
+                    <div>当前传火者: <span id="stat-name" style="color:var(--ui-gold)">-</span></div>
+                    <div>累计受苦次数: <span id="stat-count" style="color:var(--ui-red)">0</span></div>
+                </div>
+                <hr style="border-color:#333; margin: 10px 0;">
+                <div id="ach-list"></div>
+            </div>
+        </div>
+        
+        <div id="ach-toast">
+            <div class="ach-icon">🏆</div>
+            <div class="ach-info">
+                <div class="ach-title">成就解锁</div>
+                <div class="ach-name" id="toast-name"></div>
             </div>
         </div>
     </div>
