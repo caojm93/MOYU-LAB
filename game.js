@@ -107,7 +107,6 @@ function handleStart(e) {
 }
 
 function handleEnd(e) {
-    // 🔍 白名单检查：同上
     const tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'BUTTON' || e.target.classList.contains('lb-close')) {
         return; 
@@ -116,7 +115,9 @@ function handleEnd(e) {
     if(e.cancelable) e.preventDefault();
     if (state === 'PLAYING' && pouring) {
         pouring = false;
-        endGame();
+        // ❌ 删除这里的 endGame(); 
+        // ✅ 现在的逻辑是：松手后 (pouring=false)，loop函数会继续运行，
+        //    直到 flowRate 减到 0，loop 函数自己会调用 endGame()。
     }
 }
 
@@ -207,37 +208,29 @@ function endGame() {
 }
 
 function loop() {
-   if (pouring && state === 'PLAYING') {
-        // --- 核心改动：动态流速与随机扰动 ---
-        
-        // 1. 基础流速
-        let targetFlow = 4.0; 
-
-        // 2. 难度机制：杯子越满，水流越不稳定 (模拟紧张手抖)
-        const fillRatio = liquidHeight / glassH;
-        
-        if (fillRatio > 0.85) {
-            // 超过 85% 时，流速开始剧烈波动
-            // Math.random() 产生随机爆发
-            let nervousShake = (Math.random() - 0.3) * 6.0; 
-            targetFlow += nervousShake;
-        } else {
-            // 前期比较平稳
-            let calmNoise = (Math.random() - 0.5) * 1.5;
-            targetFlow += calmNoise;
+    // ⬇️ 核心改动：惯性物理系统
+    
+    // 1. 加速阶段：按住时，流速逐渐变大 (模拟水压)
+    if (pouring && state === 'PLAYING') {
+        // 这里的 0.2 是加速度，5 是最大流速
+        flowRate = Math.min(flowRate + 0.15, 5.5); 
+    } 
+    // 2. 减速阶段（惯性）：松手后，流速缓慢归零，而不是瞬间停止
+    else {
+        // 这里的 0.25 是“刹车力度”。数值越小，惯性越大，难度越高
+        if (flowRate > 0) {
+            flowRate -= 0.25; 
+            if (flowRate < 0) flowRate = 0; // 归零修正
         }
+    }
 
-        // 限制流速范围，防止倒吸
-        flowRate = Math.max(0.5, Math.min(flowRate + 0.5, targetFlow));
-        
-        // 计算高度增量
-        liquidHeight += flowRate * 0.4; 
-        
-        // 泡沫生长 (干扰视线)
-        foamHeight = Math.min(foamHeight + 0.3, glassH * 0.12);
+    // 只有当还有水流时，才增加高度
+    if (flowRate > 0 && state === 'PLAYING') {
+        liquidHeight += flowRate * 0.4; // 注入液体
+        foamHeight = Math.min(foamHeight + 0.2, glassH * 0.12); // 泡沫生长
 
-        // 粒子效果 (气泡)
-        if(Math.random() > 0.4) {
+        // 粒子生成 (流速越快，气泡越多)
+        if(Math.random() > (0.8 - flowRate * 0.1)) {
             particles.push({
                 x: glassX + 10 + Math.random() * (glassW - 20),
                 y: glassY + glassH - liquidHeight,
@@ -245,29 +238,30 @@ function loop() {
                 size: 1 + Math.random() * 3
             });
         }
-        
-        // 临界点触觉反馈 (仅在快溢出时轻微震动，施加心理压力)
-        if (fillRatio > 0.95 && fillRatio < 1.0) {
-            if(Math.random() > 0.85) vibrate(5); // 极短的震动
-        }
-
-    } else {
-        flowRate = 0;
     }
 
-    // 失败判定
-    if (state === 'PLAYING' && liquidHeight > glassH + 5) { // 稍微留一点点容错视觉，但算分时会死
-        pouring = false;
+    // ⬇️ 判定逻辑修改：必须等水流完全停止(惯性结束)才结算
+    // 如果溢出，立即判定失败
+    if (state === 'PLAYING' && liquidHeight > glassH + 3) {
+        pouring = false; // 强制打断操作
+        flowRate = 0;    // 强制停止水流
         endGame();
         return;
     }
+    
+    // 如果玩家松手了(pouring=false) 且 水流也流干了(flowRate=0) 且 还没结算
+    // 这时候才进行最终的分数判定
+    if (state === 'PLAYING' && !pouring && flowRate <= 0 && liquidHeight > 0) {
+        endGame(); // 结算分数
+        return;
+    }
 
-    // --- 绘图部分 (保持不变，直接复制原来的绘图代码即可) ---
+    // --- 绘图部分 (基本保持不变，微调了水流视觉) ---
     ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, canvasW, canvasH);
     
-    if (pouring) {
-        // 水流粗细随流速变化
-        let streamWidth = Math.max(2, flowRate * 1.5);
+    // 绘制水流 (流速越慢，水流越细，视觉反馈很重要)
+    if (flowRate > 0.1) {
+        let streamWidth = Math.max(1, flowRate * 2); // 根据流速改变粗细
         ctx.fillStyle = '#f2c94c'; 
         ctx.fillRect(canvasW/2 - streamWidth/2, 0, streamWidth, glassY + glassH - liquidHeight + 5);
     }
@@ -277,13 +271,12 @@ function loop() {
         ctx.fillStyle = '#f2994a'; 
         ctx.fillRect(glassX + 6, glassY + glassH - currentLiquidH, glassW - 12, currentLiquidH);
         
-        // 泡沫 (让它稍微浮动一点，增加视觉干扰)
-        let foamBob = Math.sin(Date.now() / 100) * 2;
+        // 简单的泡沫浮动
+        let foamBob = Math.sin(Date.now() / 150) * 1.5;
         ctx.fillStyle = '#fff5e6';
         ctx.fillRect(glassX + 6, glassY + glassH - currentLiquidH - foamBob, glassW - 12, foamHeight);
     }
 
-    // 粒子绘制
     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     for(let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i]; p.y -= p.v;
@@ -291,22 +284,18 @@ function loop() {
         if (p.y < glassY + glassH - liquidHeight) particles.splice(i, 1);
     }
 
-    // 杯子轮廓
     ctx.strokeStyle = '#cfaa68'; ctx.lineWidth = 5; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(glassX, glassY);
     ctx.lineTo(glassX, glassY + glassH); ctx.lineTo(glassX + glassW, glassY + glassH);
     ctx.lineTo(glassX + glassW, glassY); ctx.stroke();
 
-    // 高光
     ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(glassX + glassW*0.15, glassY + glassH*0.1);
     ctx.lineTo(glassX + glassW*0.15, glassY + glassH - glassH*0.1); ctx.stroke();
 
-    // 目标线 (变得更淡，稍微难看清一点)
     ctx.strokeStyle = 'rgba(200, 50, 50, 0.3)'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
     ctx.beginPath(); ctx.moveTo(0, glassY); ctx.lineTo(canvasW, glassY); ctx.stroke(); ctx.setLineDash([]);
 
-    // 龙头
     ctx.fillStyle = '#333'; ctx.fillRect(canvasW/2 - 20, -10, 40, 60);
     ctx.fillStyle = '#cfaa68'; ctx.fillRect(canvasW/2 - 20, 40, 40, 6);
 
