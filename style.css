@@ -44,7 +44,19 @@ canvas { z-index: 1; -webkit-touch-callout: none; }
     padding: 20px; box-sizing: border-box;
 }
 
-.hidden { opacity: 0; pointer-events: none; }
+/* 核心修复：隐藏时彻底屏蔽点击，防止幽灵按钮 */
+.hidden { 
+    opacity: 0; 
+    pointer-events: none; 
+    z-index: -1 !important;
+}
+.hidden button, .hidden input {
+    pointer-events: none !important;
+    visibility: hidden;
+}
+.overlay:not(.hidden) button, .overlay:not(.hidden) input {
+    visibility: visible;
+}
 
 h1 {
     font-size: 1.8rem; color: var(--ui-gold);
@@ -62,7 +74,7 @@ h1 {
     font-size: 1.2rem; padding: 10px; width: 100%; text-align: center;
     outline: none; transition: border-color 0.3s; border-radius: 0;
     
-    /* 🔴 修复输入框点击 */
+    /* 修复输入框点击 */
     user-select: text !important;
     -webkit-user-select: text !important;
     pointer-events: auto !important;
@@ -94,13 +106,51 @@ button:disabled { border-color: #444; color: #444; pointer-events: none; }
 /* 结果页 */
 #result-text {
     font-size: 3rem; font-weight: bold; text-transform: uppercase;
-    letter-spacing: 2px; margin-bottom: 10px; opacity: 0;
+    letter-spacing: 2px; margin-bottom: 5px; opacity: 0;
     transform: scale(1.3); transition: all 0.5s; text-align: center;
 }
-#result-detail { font-size: 1.2rem; color: #ccc; margin-bottom: 10px; text-align: center; }
+#result-detail { font-size: 1.2rem; color: #ccc; margin-bottom: 5px; text-align: center; }
 .show-result { opacity: 1 !important; transform: scale(1) !important; }
 .spilled { color: var(--ui-red); text-shadow: 0 0 15px rgba(138, 14, 14, 0.8); }
 .success { color: var(--ui-gold); text-shadow: 0 0 15px rgba(207, 170, 104, 0.8); }
+
+/* --- 二维码样式 --- */
+.qr-container {
+    margin: 10px 0;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: fadeIn 1s ease-in;
+}
+
+.qr-code {
+    width: 110px; height: 110px;
+    background-color: #fff; padding: 5px;
+    border: 2px solid var(--ui-gold);
+    box-shadow: 0 0 15px rgba(207, 170, 104, 0.2);
+    border-radius: 4px;
+}
+
+.qr-hint {
+    margin-top: 8px; font-size: 0.8rem; color: #888;
+    line-height: 1.4; letter-spacing: 1px;
+    text-transform: uppercase; font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 小屏适配 */
+@media (max-height: 650px) {
+    .qr-code { width: 90px; height: 90px; }
+    #result-text { font-size: 2rem; }
+    .btn-group { margin-top: 10px; }
+    button { padding: 10px 20px; }
+}
 
 /* 面板通用 */
 .panel-common {
@@ -179,25 +229,3 @@ button:disabled { border-color: #444; color: #444; pointer-events: none; }
     animation: pulse 2s infinite;
 }
 @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-/* --- style.css 追加修复代码 --- */
-
-/* 🔴 核心修复：消灭幽灵按钮 */
-/* 当父容器有 .hidden 类时，强制禁止内部所有按钮的点击事件 */
-.hidden button,
-.hidden input {
-    pointer-events: none !important;
-    visibility: hidden; /* 双重保险：直接不可见 */
-}
-
-/* 确保显示时恢复可见 */
-.overlay:not(.hidden) button,
-.overlay:not(.hidden) input {
-    visibility: visible;
-}
-
-/* 优化 .hidden 的层级，确保它不会挡住下面的操作 */
-.hidden {
-    opacity: 0;
-    pointer-events: none;
-    z-index: -1 !important; /* 关键：隐藏时扔到最底层 */
-}
