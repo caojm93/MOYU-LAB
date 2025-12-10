@@ -15,8 +15,16 @@ const ACHIEVEMENTS = [
     { id: 'limit',       icon: '⚡', title: '极限操作',    desc: '得分超过 1490 分' },
     { id: 'greed',       icon: '😈', title: '贪婪的诅咒',  desc: '倒酒溢出 (失败)' },
     { id: 'tiny',        icon: '🤏', title: '深渊的凝视',  desc: '倒得太少 (<20%)' },
+    { id: 'godlike',     icon: '👑', title: '薪王化身',    desc: '单次得分超过 1450 分' },
+    { id: 'limit',       icon: '⚡', title: '极限操作',    desc: '得分超过 1490 分' },
     
-    // 🏆 白金成就
+    // ✅ 新增：独立的界限突破成就 (隐藏神迹)
+    { id: 'break_limit', icon: '🚀', title: '界限突破',    desc: '突破物理法则！得分超过 1500 分' },
+
+    { id: 'greed',       icon: '😈', title: '贪婪的诅咒',  desc: '倒酒溢出 (失败)' },
+    { id: 'tiny',        icon: '🤏', title: '深渊的凝视',  desc: '倒得太少 (<20%)' },
+    
+    // 🏆 白金成就 (保持在最后)
     { id: 'platinum',    icon: '🍸', title: '传说中的摸鱼王', desc: '找老板领取一杯 Shot！(全成就达成)' }
 ];
 
@@ -67,9 +75,9 @@ if(currentPlayerName) {
     startBtn.disabled = false;
 }
 
-// --- 事件监听 (交互逻辑修复版) ---
+// --- 事件监听 (修复版) ---
 
-// 1. 输入框监听
+// 1. 输入框
 nameInput.addEventListener('input', (e) => {
     if(e.target.value.trim().length > 0) {
         startBtn.disabled = false;
@@ -79,16 +87,17 @@ nameInput.addEventListener('input', (e) => {
     }
 });
 
-// 2. 按钮监听
+// 2. 开始游戏按钮
 startBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     localStorage.setItem('moyu_username', currentPlayerName);
     resetGame();
 });
 
+// 3. 重玩按钮
 document.getElementById('restart-btn').addEventListener('click', (e) => { e.stopPropagation(); resetGame(); });
 
-// 3. 面板控制
+// 4. 面板控制系统
 function openPanel(id) {
     document.getElementById(id).classList.remove('hidden');
     if(id === 'leaderboard-panel') fetchLeaderboard(currentLbType);
@@ -103,13 +112,13 @@ window.switchLb = function(type) {
     fetchLeaderboard(type);
 }
 
-// 4. 面板按钮绑定
+// 5. 绑定所有UI按钮
 document.getElementById('check-rank-btn').addEventListener('click', (e) => { e.stopPropagation(); openPanel('leaderboard-panel'); });
 document.getElementById('open-lb-btn').addEventListener('click', (e) => { e.stopPropagation(); openPanel('leaderboard-panel'); });
 document.getElementById('open-ach-btn').addEventListener('click', (e) => { e.stopPropagation(); openPanel('achievement-panel'); });
 document.getElementById('result-ach-btn').addEventListener('click', (e) => { e.stopPropagation(); openPanel('achievement-panel'); });
 
-// 5. 全局触控处理 (含白名单，防止误触)
+// 6. 全局触控处理 (白名单防误触)
 const container = document.getElementById('game-container');
 
 function handleStart(e) {
@@ -138,7 +147,7 @@ function handleEnd(e) {
     if(e.cancelable) e.preventDefault();
     
     if (state === 'PLAYING' && pouring) {
-        pouring = false; // 惯性模式：只设为false，不立即结算
+        pouring = false; // 惯性模式：只松手，等待物理流干
     }
 }
 
@@ -147,7 +156,7 @@ container.addEventListener('touchend', handleEnd, {passive: false});
 container.addEventListener('mousedown', handleStart);
 container.addEventListener('mouseup', handleEnd);
 
-// --- 游戏核心逻辑 ---
+// --- 游戏核心逻辑 (物理引擎) ---
 
 function resetGame() {
     state = 'PLAYING';
@@ -161,7 +170,6 @@ function resetGame() {
     loop();
 }
 
-// 物理循环 (含惯性手感)
 function loop() {
     // 1. 物理计算
     if (pouring && state === 'PLAYING') {
@@ -188,7 +196,8 @@ function loop() {
     }
 
     // 2. 状态判定
-    // 溢出判定
+    // 视觉容错上限：允许稍微高出杯口一点点(3像素)，模拟表面张力
+    // 超过这个界限才算溢出
     if (state === 'PLAYING' && liquidHeight > glassH + 3) {
         pouring = false; flowRate = 0;
         endGame(true); // true = 溢出
@@ -246,35 +255,49 @@ function loop() {
     if (state === 'PLAYING') requestAnimationFrame(loop);
 }
 
-// --- 结算与成就系统 ---
+// --- 结算与成就系统 (含白金逻辑) ---
 
 function endGame(spilled) {
     state = 'END';
-    const fillRatio = liquidHeight / glassH;
+    
+    // 🔓 表面张力：不锁 1.0 上限，允许超过 100%
+    const fillRatio = liquidHeight / glassH; 
+
     let score = 0;
     let mainText="", cssClass="", flavorText="";
 
-    // 更新受苦次数
     myPlayCount++;
     localStorage.setItem('moyu_playcount', myPlayCount);
     
-    // 检查次数成就
+    // 次数成就
     if(myPlayCount >= 10) unlockAch('hollow');
     if(myPlayCount >= 50) unlockAch('abyss');
 
     if (spilled) {
-        // 失败逻辑
         score = 0; mainText = "YOU SPILLED"; cssClass = "spilled"; flavorText = "贪婪蒙蔽了双眼";
         vibrate([50, 50, 200]);
         if(myPlayCount === 1) unlockAch('first_blood'); 
         unlockAch('greed');
     } else {
-        // 成功逻辑 (指数级算分)
         if (fillRatio >= 0.93) {
+            // 指数级算分
             const curve = Math.pow((fillRatio - 0.93) / 0.07, 4);
             score = 1000 + Math.floor(curve * 500);
             
-            if (score >= 1490) {
+            // 🔓 界限突破判断 (1500+)
+            if (score > 1500) {
+                mainText = "LIMIT BREAKER"; 
+                flavorText = "超越物理法则的神迹 (EX)"; 
+                cssClass = "success";
+                vibrate([50, 50, 50, 50, 50, 50, 50, 50]); 
+                
+                // ✅ 修改：解锁这个专属成就，同时也解锁其他的
+                unlockAch('break_limit'); // <--- 关键修改
+                unlockAch('godlike'); 
+                unlockAch('limit'); 
+                unlockAch('perfect');
+            }
+            else if (score >= 1490) {
                 mainText = "GODLIKE"; flavorText = "神一般的技艺 (S+)"; cssClass = "success";
                 vibrate([100, 50, 100, 50, 100]);
                 unlockAch('godlike'); unlockAch('limit');
@@ -299,15 +322,13 @@ function endGame(spilled) {
         }
     }
 
-    // 更新UI
     resultText.innerText = mainText;
     resultText.className = cssClass;
-    resultDetail.innerHTML = `得分: <span style="color:#fff;font-size:1.4em">${score}</span><br><span style="font-size:0.8rem;color:#666">${flavorText}</span>`;
+    resultDetail.innerHTML = `得分: <span style="color:#fff;font-size:1.6em;text-shadow:0 0 10px var(--ui-gold)">${score}</span><br><span style="font-size:0.8rem;color:#666">${flavorText}</span>`;
     
     resultScreen.classList.remove('hidden');
     setTimeout(() => { resultText.classList.add('show-result'); }, 50);
 
-    // 云端同步
     if(score > 0) uploadScore(score);
     updatePlayerStats();
 }
@@ -320,30 +341,31 @@ function unlockAch(id) {
     const achData = ACHIEVEMENTS.find(a => a.id === id);
     if(achData) {
         document.getElementById('toast-name').innerText = achData.title;
-        
-        // 白金成就特殊颜色
+        // 白金成就特殊高亮
         if(id === 'platinum') {
             document.getElementById('toast-name').style.color = '#ff00ff';
         } else {
             document.getElementById('toast-name').style.color = '';
         }
-
         const toast = document.getElementById('ach-toast');
         toast.classList.add('show');
         setTimeout(() => { toast.classList.remove('show'); }, 4000);
     }
 
-    // 每次解锁普通成就，都检查是否达成白金
+    // 每次解锁都检查白金状态
     if(id !== 'platinum') {
         checkPlatinum();
     }
 }
 
-// 检查是否全成就
+// 🏆 白金成就检查器
 function checkPlatinum() {
+    // 找出所有普通成就
     const regularAchs = ACHIEVEMENTS.filter(a => a.id !== 'platinum');
+    // 检查是否全部已解锁
     const isAllUnlocked = regularAchs.every(a => myUnlockedAch.includes(a.id));
     if (isAllUnlocked) {
+        // 稍微延迟弹出，更有仪式感
         setTimeout(() => { unlockAch('platinum'); }, 1500);
     }
 }
@@ -356,7 +378,7 @@ function renderAchievements() {
     list.innerHTML = ACHIEVEMENTS.map(ach => {
         const isUnlocked = myUnlockedAch.includes(ach.id);
         const styleClass = isUnlocked ? 'unlocked' : '';
-        // 白金成就特殊边框
+        // 白金成就特殊样式
         const extraStyle = (isUnlocked && ach.id === 'platinum') ? 'border-color:#ff00ff; box-shadow:0 0 10px #ff00ff;' : '';
         
         return `
