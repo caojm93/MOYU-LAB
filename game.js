@@ -11,7 +11,6 @@ let pouring = false;
 let liquidHeight = 0, foamHeight = 0, flowRate = 0;
 let particles = [];
 let currentPlayerName = localStorage.getItem('moyu_username') || "";
-let unlockedAch = JSON.parse(localStorage.getItem('moyu_achievements') || '[]');
 
 // 画布设置
 const canvas = document.getElementById('gameCanvas');
@@ -36,6 +35,7 @@ function resize() {
     canvas.width = canvasW;
     canvas.height = canvasH;
     
+    // 动态调整杯子大小
     glassH = canvasH * 0.4;
     glassW = glassH * 0.6;
     if (glassW > canvasW * 0.7) glassW = canvasW * 0.7;
@@ -46,12 +46,15 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
+// 自动填充名字
 if(currentPlayerName) {
     nameInput.value = currentPlayerName;
     startBtn.disabled = false;
 }
 
-// --- 事件监听 ---
+// --- 事件监听 (修复版) ---
+
+// 1. 输入框监听
 nameInput.addEventListener('input', (e) => {
     if(e.target.value.trim().length > 0) {
         startBtn.disabled = false;
@@ -61,8 +64,9 @@ nameInput.addEventListener('input', (e) => {
     }
 });
 
+// 2. 按钮监听
 startBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
+    e.stopPropagation(); // 阻止冒泡防止触发倒酒
     localStorage.setItem('moyu_username', currentPlayerName);
     resetGame();
 });
@@ -81,28 +85,46 @@ document.getElementById('open-lb-btn').addEventListener('click', (e) => {
 
 window.closeLeaderboard = function() { lbPanel.classList.add('hidden'); }
 
+// 3. 全局点击/触摸监听 (🔴 关键交互修复)
 const container = document.getElementById('game-container');
+
 function handleStart(e) {
+    // 🔍 检查：如果点的是输入框或按钮，直接放行，不拦截！
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'BUTTON') {
+        return; 
+    }
+
+    // 只有点的是背景/游戏区时，才禁止默认行为（防滚动）
     if(e.cancelable) e.preventDefault();
-    if(!lbPanel.classList.contains('hidden')) return;
+    if(!lbPanel.classList.contains('hidden')) return; // 排行榜打开时不倒酒
+
     if (state === 'PLAYING' && !pouring) {
         pouring = true;
         vibrate(20);
     }
 }
+
 function handleEnd(e) {
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'BUTTON') {
+        return; 
+    }
+
     if(e.cancelable) e.preventDefault();
     if (state === 'PLAYING' && pouring) {
         pouring = false;
         endGame();
     }
 }
+
+// 绑定事件
 container.addEventListener('touchstart', handleStart, {passive: false});
 container.addEventListener('touchend', handleEnd, {passive: false});
 container.addEventListener('mousedown', handleStart);
 container.addEventListener('mouseup', handleEnd);
 
-// --- 游戏核心逻辑 ---
+// --- 游戏核心逻辑 (保持一致) ---
 function resetGame() {
     state = 'PLAYING';
     liquidHeight = 0; foamHeight = 0; pouring = false; flowRate = 0; particles = [];
@@ -197,7 +219,7 @@ function loop() {
 
 function vibrate(pattern) { if (navigator.vibrate) navigator.vibrate(pattern); }
 
-// --- 🔴 Bmob API 核心逻辑 ---
+// --- Bmob API ---
 
 function formatTime(isoString) {
     const date = new Date(isoString);
@@ -205,15 +227,10 @@ function formatTime(isoString) {
 }
 
 function uploadScore(score) {
-    if(!BMOB_APP_ID.includes("Application")) {
+    if(!BMOB_APP_ID.includes("填入")) {
         uploadStatus.innerText = "正在向云端铭刻...";
-        
-        // 构建请求
         const url = "https://api.bmobcloud.com/1/classes/GameScore";
-        const data = {
-            playerName: currentPlayerName,
-            score: score
-        };
+        const data = { playerName: currentPlayerName, score: score };
 
         fetch(url, {
             method: 'POST',
@@ -227,7 +244,6 @@ function uploadScore(score) {
         .then(res => res.json())
         .then(data => {
             uploadStatus.innerText = "记录已铭刻于云端";
-            console.log("Success:", data);
         })
         .catch(err => {
             console.error(err);
@@ -242,13 +258,13 @@ function fetchLeaderboard() {
     const list = document.getElementById('lb-content');
     list.innerHTML = '<div class="lb-loading">正在召唤灵魂...</div>';
 
-    if(BMOB_APP_ID.includes("Application")) {
+    if(BMOB_APP_ID.includes("填入")) {
         list.innerHTML = '<div class="lb-loading">请配置 API Key</div>';
         return;
     }
 
-    // 查询 GameScore 表，按 score 降序排列，取前 20 个
-    const url = "https://api.bmobcloud.com/1/classes/GameScore?order=-score&limit=20";
+    // 按 score 降序取前 30 名
+    const url = "https://api.bmobcloud.com/1/classes/GameScore?order=-score&limit=30";
 
     fetch(url, {
         method: 'GET',
@@ -269,7 +285,6 @@ function fetchLeaderboard() {
         data.results.forEach((entry, index) => {
             const item = document.createElement('div');
             item.className = 'lb-item';
-            // Bmob 自动生成的创建时间是 createdAt
             const timeStr = formatTime(entry.createdAt);
             
             item.innerHTML = `
