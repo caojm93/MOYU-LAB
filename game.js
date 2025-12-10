@@ -5,7 +5,7 @@ const BMOB_APP_ID  = "909d88911b4256680a5bb5d9df1f84e2";
 const BMOB_API_KEY = "921bf8d038ac6e5a904e1fab0e8f7ac3";
 // ==========================================
 
-// --- ✅ 新增：更丰富的成就配置 ---
+// --- 成就配置 ---
 const ACHIEVEMENTS = [
     { id: 'first_blood', icon: '🩸', title: '初次受苦',    desc: '第一次倒酒失败' },
     { id: 'hollow',      icon: '💀', title: '活尸化',      desc: '累计受苦达到 10 次' },
@@ -86,10 +86,9 @@ function openPanel(id) {
     if(id === 'achievement-panel') renderAchievements();
 }
 window.closePanel = function(id) { document.getElementById(id).classList.add('hidden'); }
-// 切换排行榜类型
+
 window.switchLb = function(type) {
     currentLbType = type;
-    // 更新 Tab 样式
     document.querySelectorAll('.lb-tab').forEach(el => el.classList.remove('active'));
     document.querySelector(`.lb-tab[data-type="${type}"]`).classList.add('active');
     fetchLeaderboard(type);
@@ -98,18 +97,12 @@ window.switchLb = function(type) {
 document.getElementById('check-rank-btn').addEventListener('click', (e) => { e.stopPropagation(); openPanel('leaderboard-panel'); });
 document.getElementById('open-lb-btn').addEventListener('click', (e) => { e.stopPropagation(); openPanel('leaderboard-panel'); });
 document.getElementById('open-ach-btn').addEventListener('click', (e) => { e.stopPropagation(); openPanel('achievement-panel'); });
+document.getElementById('result-ach-btn').addEventListener('click', (e) => { e.stopPropagation(); openPanel('achievement-panel'); });
 
-// ✅ 新增：结果页的“查看成就”按钮
-document.getElementById('result-ach-btn').addEventListener('click', (e) => { 
-    e.stopPropagation(); 
-    openPanel('achievement-panel'); 
-});
-
-// 触控处理 (含白名单)
+// 触控处理 (含白名单修复)
 const container = document.getElementById('game-container');
 function handleStart(e) {
     const tag = e.target.tagName;
-    // 白名单：输入框、按钮、关闭图标、面板内部、Tab标签
     if (tag === 'INPUT' || tag === 'BUTTON' || e.target.classList.contains('lb-close') || e.target.classList.contains('lb-tab') || e.target.closest('.panel-common')) {
         return; 
     }
@@ -127,7 +120,7 @@ function handleEnd(e) {
     if (tag === 'INPUT' || tag === 'BUTTON' || e.target.classList.contains('lb-close') || e.target.classList.contains('lb-tab')) return;
     if(e.cancelable) e.preventDefault();
     if (state === 'PLAYING' && pouring) {
-        pouring = false; 
+        pouring = false; // 惯性松手
     }
 }
 container.addEventListener('touchstart', handleStart, {passive: false});
@@ -148,12 +141,13 @@ function resetGame() {
     loop();
 }
 
+// 物理循环 (惯性版)
 function loop() {
     if (pouring && state === 'PLAYING') {
-        flowRate = Math.min(flowRate + 0.15, 5.5); 
+        flowRate = Math.min(flowRate + 0.15, 5.5); // 加速
     } else {
         if (flowRate > 0) {
-            flowRate -= 0.25; 
+            flowRate -= 0.25; // 减速
             if (flowRate < 0) flowRate = 0;
         }
     }
@@ -224,7 +218,7 @@ function endGame(spilled) {
     myPlayCount++;
     localStorage.setItem('moyu_playcount', myPlayCount);
     
-    // ✅ 成就检查：次数
+    // 检查次数成就
     if(myPlayCount >= 10) unlockAch('hollow');
     if(myPlayCount >= 50) unlockAch('abyss');
 
@@ -241,7 +235,7 @@ function endGame(spilled) {
             if (score >= 1490) {
                 mainText = "GODLIKE"; flavorText = "神一般的技艺 (S+)"; cssClass = "success";
                 vibrate([100, 50, 100, 50, 100]);
-                unlockAch('godlike'); unlockAch('limit'); // 解锁双重成就
+                unlockAch('godlike'); unlockAch('limit');
             } else if (score >= 1450) {
                 mainText = "LORD OF CINDER"; flavorText = "薪王化身 (S)"; cssClass = "success";
                 vibrate([80, 80, 80]);
@@ -347,19 +341,16 @@ function updatePlayerStats() {
     });
 }
 
-// ✅ 修改：支持切换榜单的排行榜函数
+// 双榜单查询
 function fetchLeaderboard(type) {
     const list = document.getElementById('lb-content');
     list.innerHTML = '<div style="text-align:center;color:#666;padding:20px;">正在召唤灵魂...</div>';
     if(BMOB_APP_ID.includes("填入")) return;
 
     let url = "";
-    // 根据类型决定查询哪张表
     if (type === 'score') {
-        // 查询 GameScore 表，按分数降序
         url = "https://api.bmobcloud.com/1/classes/GameScore?order=-score&limit=20";
     } else {
-        // 查询 PlayerStats 表，按次数降序
         url = "https://api.bmobcloud.com/1/classes/PlayerStats?order=-playCount&limit=20";
     }
 
@@ -374,16 +365,13 @@ function fetchLeaderboard(type) {
         data.results.forEach((entry, i) => {
             let val = "";
             let label = "";
-            
             if (type === 'score') {
                 val = entry.score;
-                label = formatTime(entry.createdAt); // 分数榜显示时间
+                label = formatTime(entry.createdAt); 
             } else {
                 val = entry.playCount;
-                label = "次受苦"; // 受苦榜显示文字
+                label = "次受苦"; 
             }
-
-            // 特殊样式：受苦榜用红色显示
             const scoreColor = type === 'score' ? 'var(--ui-gold)' : 'var(--ui-red)';
 
             list.innerHTML += `
