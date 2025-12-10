@@ -205,51 +205,106 @@ function endGame() {
 }
 
 function loop() {
-    if (pouring && state === 'PLAYING') {
-        let noise = (Math.random() - 0.5) * 1.5; 
-        flowRate = Math.min(flowRate + 0.2, 5 + noise);
+   if (pouring && state === 'PLAYING') {
+        // --- 核心改动：动态流速与随机扰动 ---
+        
+        // 1. 基础流速
+        let targetFlow = 4.0; 
+
+        // 2. 难度机制：杯子越满，水流越不稳定 (模拟紧张手抖)
+        const fillRatio = liquidHeight / glassH;
+        
+        if (fillRatio > 0.85) {
+            // 超过 85% 时，流速开始剧烈波动
+            // Math.random() 产生随机爆发
+            let nervousShake = (Math.random() - 0.3) * 6.0; 
+            targetFlow += nervousShake;
+        } else {
+            // 前期比较平稳
+            let calmNoise = (Math.random() - 0.5) * 1.5;
+            targetFlow += calmNoise;
+        }
+
+        // 限制流速范围，防止倒吸
+        flowRate = Math.max(0.5, Math.min(flowRate + 0.5, targetFlow));
+        
+        // 计算高度增量
         liquidHeight += flowRate * 0.4; 
-        foamHeight = Math.min(foamHeight + 0.3, glassH * 0.1);
+        
+        // 泡沫生长 (干扰视线)
+        foamHeight = Math.min(foamHeight + 0.3, glassH * 0.12);
+
+        // 粒子效果 (气泡)
         if(Math.random() > 0.4) {
             particles.push({
                 x: glassX + 10 + Math.random() * (glassW - 20),
                 y: glassY + glassH - liquidHeight,
-                v: 2 + Math.random() * 3, size: 1 + Math.random() * 3
+                v: 2 + Math.random() * 3, 
+                size: 1 + Math.random() * 3
             });
         }
-    } else { flowRate = 0; }
+        
+        // 临界点触觉反馈 (仅在快溢出时轻微震动，施加心理压力)
+        if (fillRatio > 0.95 && fillRatio < 1.0) {
+            if(Math.random() > 0.85) vibrate(5); // 极短的震动
+        }
 
-    if (state === 'PLAYING' && liquidHeight > glassH + 10) {
-        pouring = false; endGame(); return;
+    } else {
+        flowRate = 0;
     }
 
+    // 失败判定
+    if (state === 'PLAYING' && liquidHeight > glassH + 5) { // 稍微留一点点容错视觉，但算分时会死
+        pouring = false;
+        endGame();
+        return;
+    }
+
+    // --- 绘图部分 (保持不变，直接复制原来的绘图代码即可) ---
     ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, canvasW, canvasH);
     
     if (pouring) {
-        ctx.fillStyle = '#f2c94c'; ctx.fillRect(canvasW/2 - 4, 0, 8, glassY + glassH - liquidHeight + 5);
+        // 水流粗细随流速变化
+        let streamWidth = Math.max(2, flowRate * 1.5);
+        ctx.fillStyle = '#f2c94c'; 
+        ctx.fillRect(canvasW/2 - streamWidth/2, 0, streamWidth, glassY + glassH - liquidHeight + 5);
     }
+    
     const currentLiquidH = Math.min(liquidHeight, glassH + 20);
     if (liquidHeight > 0) {
         ctx.fillStyle = '#f2994a'; 
         ctx.fillRect(glassX + 6, glassY + glassH - currentLiquidH, glassW - 12, currentLiquidH);
+        
+        // 泡沫 (让它稍微浮动一点，增加视觉干扰)
+        let foamBob = Math.sin(Date.now() / 100) * 2;
         ctx.fillStyle = '#fff5e6';
-        ctx.fillRect(glassX + 6, glassY + glassH - currentLiquidH, glassW - 12, foamHeight);
+        ctx.fillRect(glassX + 6, glassY + glassH - currentLiquidH - foamBob, glassW - 12, foamHeight);
     }
+
+    // 粒子绘制
     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     for(let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i]; p.y -= p.v;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
         if (p.y < glassY + glassH - liquidHeight) particles.splice(i, 1);
     }
+
+    // 杯子轮廓
     ctx.strokeStyle = '#cfaa68'; ctx.lineWidth = 5; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(glassX, glassY);
     ctx.lineTo(glassX, glassY + glassH); ctx.lineTo(glassX + glassW, glassY + glassH);
     ctx.lineTo(glassX + glassW, glassY); ctx.stroke();
+
+    // 高光
     ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(glassX + glassW*0.15, glassY + glassH*0.1);
     ctx.lineTo(glassX + glassW*0.15, glassY + glassH - glassH*0.1); ctx.stroke();
-    ctx.strokeStyle = 'rgba(200, 50, 50, 0.5)'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+
+    // 目标线 (变得更淡，稍微难看清一点)
+    ctx.strokeStyle = 'rgba(200, 50, 50, 0.3)'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
     ctx.beginPath(); ctx.moveTo(0, glassY); ctx.lineTo(canvasW, glassY); ctx.stroke(); ctx.setLineDash([]);
+
+    // 龙头
     ctx.fillStyle = '#333'; ctx.fillRect(canvasW/2 - 20, -10, 40, 60);
     ctx.fillStyle = '#cfaa68'; ctx.fillRect(canvasW/2 - 20, 40, 40, 6);
 
