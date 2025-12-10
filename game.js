@@ -16,13 +16,9 @@ const ACHIEVEMENTS = [
     { id: 'greed',       icon: '😈', title: '贪婪的诅咒',  desc: '倒酒溢出 (失败)' },
     { id: 'tiny',        icon: '🤏', title: '深渊的凝视',  desc: '倒得太少 (<20%)' },
     { id: 'godlike',     icon: '👑', title: '薪王化身',    desc: '单次得分超过 1450 分' },
-    { id: 'limit',       icon: '⚡', title: '极限操作',    desc: '得分超过 1490 分' },
-    
+    { id: 'limit',       icon: '⚡', title: '极限操作',    desc: '得分超过 1490 分' },    
     // ✅ 新增：独立的界限突破成就 (隐藏神迹)
     { id: 'break_limit', icon: '🚀', title: '界限突破',    desc: '突破物理法则！得分超过 1500 分' },
-
-    { id: 'greed',       icon: '😈', title: '贪婪的诅咒',  desc: '倒酒溢出 (失败)' },
-    { id: 'tiny',        icon: '🤏', title: '深渊的凝视',  desc: '倒得太少 (<20%)' },
     
     // 🏆 白金成就 (保持在最后)
     { id: 'platinum',    icon: '🍸', title: '传说中的摸鱼王', desc: '找老板领取一杯 Shot！(全成就达成)' }
