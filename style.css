@@ -21,35 +21,26 @@ body {
     height: 100dvh; /* 移动端动态高度 */
     user-select: none;
     -webkit-user-select: none;
-    /* 关键：允许 touch-action 在部分元素上生效，但在 body 上默认禁止以防滚动 */
     touch-action: none; 
 }
 
 #game-container {
     position: relative;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
     overflow: hidden;
 }
 
-canvas { 
-    z-index: 1; 
-    -webkit-touch-callout: none; 
-}
+canvas { z-index: 1; -webkit-touch-callout: none; }
 
-/* --- 通用 UI 组件 --- */
+/* 通用遮罩 */
 .overlay {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     display: flex; flex-direction: column;
     justify-content: center; align-items: center;
     background: rgba(0, 0, 0, 0.92);
-    z-index: 10;
-    transition: opacity 0.3s;
+    z-index: 10; transition: opacity 0.3s;
     padding: 20px; box-sizing: border-box;
 }
 
@@ -60,10 +51,9 @@ h1 {
     text-shadow: 0 0 10px rgba(207, 170, 104, 0.3);
     margin-bottom: 5px; text-align: center; letter-spacing: 2px;
 }
-
 .subtitle { font-size: 0.8rem; color: #666; margin-bottom: 30px; font-style: italic; }
 
-/* --- 输入框 (修复版) --- */
+/* 输入框 */
 .input-group { width: 80%; max-width: 300px; margin-bottom: 20px; text-align: center; position: relative; z-index: 20; }
 
 .soul-input {
@@ -72,11 +62,11 @@ h1 {
     font-size: 1.2rem; padding: 10px; width: 100%; text-align: center;
     outline: none; transition: border-color 0.3s; border-radius: 0;
     
-    /* 🔴 关键修复：强制允许选中和输入 */
+    /* 🔴 修复输入框点击 */
     user-select: text !important;
     -webkit-user-select: text !important;
     pointer-events: auto !important;
-    touch-action: manipulation !important; /* 允许点击操作 */
+    touch-action: manipulation !important;
 }
 .soul-input:focus { border-bottom-color: var(--ui-gold); }
 
@@ -88,7 +78,6 @@ button {
     cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
     margin-top: 10px; -webkit-tap-highlight-color: transparent;
     transition: all 0.2s;
-    /* 🔴 修复按钮点击 */
     pointer-events: auto !important; 
     touch-action: manipulation;
 }
@@ -96,34 +85,48 @@ button:active { background: rgba(207, 170, 104, 0.2); transform: scale(0.98); }
 button:disabled { border-color: #444; color: #444; pointer-events: none; }
 
 .btn-group { display: flex; gap: 15px; margin-top: 20px; }
+.hud-btn {
+    margin: 0; padding: 6px 12px; font-size: 0.8rem; 
+    background: rgba(0,0,0,0.6); border: 1px solid #444; 
+    color: var(--ui-gold);
+}
 
-/* --- 结果页 --- */
+/* 结果页 */
 #result-text {
     font-size: 3rem; font-weight: bold; text-transform: uppercase;
     letter-spacing: 2px; margin-bottom: 10px; opacity: 0;
     transform: scale(1.3); transition: all 0.5s; text-align: center;
 }
-#result-detail { font-size: 1.2rem; color: #ccc; margin-bottom: 10px; }
+#result-detail { font-size: 1.2rem; color: #ccc; margin-bottom: 10px; text-align: center; }
 .show-result { opacity: 1 !important; transform: scale(1) !important; }
 .spilled { color: var(--ui-red); text-shadow: 0 0 15px rgba(138, 14, 14, 0.8); }
 .success { color: var(--ui-gold); text-shadow: 0 0 15px rgba(207, 170, 104, 0.8); }
 
-/* --- 排行榜 --- */
-#leaderboard-panel {
+/* 面板通用 */
+.panel-common {
     position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: 90%; max-width: 400px; height: 70%;
+    width: 90%; max-width: 400px; height: 75%;
     background: var(--panel-bg); border: 1px solid var(--ui-gold);
-    z-index: 50; /* 提高层级 */
-    display: flex; flex-direction: column;
+    z-index: 50; display: flex; flex-direction: column;
     box-shadow: 0 0 50px rgba(0,0,0,1);
 }
+
 .lb-header {
     background: rgba(207, 170, 104, 0.1); color: var(--ui-gold);
     padding: 15px; font-weight: bold; border-bottom: 1px solid #333;
     display: flex; justify-content: space-between; align-items: center;
 }
 .lb-close { cursor: pointer; padding: 0 10px; font-size: 1.5rem; }
+
+/* 排行榜 Tabs */
+.lb-tabs { display: flex; border-bottom: 1px solid #333; background: rgba(0,0,0,0.3); }
+.lb-tab {
+    flex: 1; text-align: center; padding: 10px; font-size: 0.8rem;
+    color: #666; cursor: pointer; transition: all 0.2s; border-bottom: 2px solid transparent;
+}
+.lb-tab.active { color: var(--ui-gold); background: rgba(207, 170, 104, 0.05); border-bottom: 2px solid var(--ui-gold); }
+
 .lb-list { flex: 1; overflow-y: auto; padding: 10px; font-size: 0.9rem; -webkit-overflow-scrolling: touch; }
 .lb-item {
     display: flex; justify-content: space-between; align-items: center;
@@ -135,64 +138,27 @@ button:disabled { border-color: #444; color: #444; pointer-events: none; }
 .lb-name { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-right: 10px; text-align: left; }
 .lb-score { color: var(--ui-gold); font-weight: bold; }
 .lb-date { font-size: 0.7rem; color: #555; margin-left: 10px; }
-.lb-loading { text-align: center; color: #666; padding: 20px; font-style: italic; }
 
-/* HUD & Controls */
-#hud { position: absolute; top: 40px; left: 20px; z-index: 5; font-size: 1rem; color: var(--ui-gold); }
-#open-lb-btn { 
-    position: absolute; top: 40px; right: 20px; z-index: 5; margin: 0;
-    padding: 8px 15px; font-size: 0.8rem; background: rgba(0,0,0,0.5); border-color: #444; 
-}
-#controls-hint {
-    position: absolute; bottom: 8%; width: 100%; text-align: center;
-    color: #555; font-size: 0.9rem; pointer-events: none;
-    text-transform: uppercase; letter-spacing: 2px;
-    animation: pulse 2s infinite;
-}
-@keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-/* style.css 追加内容 */
-
-.hud-btn {
-    margin: 0; padding: 6px 12px; font-size: 0.8rem; 
-    background: rgba(0,0,0,0.6); border: 1px solid #444; 
-    color: var(--ui-gold); cursor: pointer; pointer-events: auto;
-}
-
-/* 统一面板样式 */
-.panel-common {
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90%; max-width: 400px; height: 75%;
-    background: var(--panel-bg); border: 1px solid var(--ui-gold);
-    z-index: 50; display: flex; flex-direction: column;
-    box-shadow: 0 0 50px rgba(0,0,0,1);
-}
-
+/* 成就内容 */
 .ach-content { flex: 1; overflow-y: auto; padding: 15px; -webkit-overflow-scrolling: touch; }
-
-/* 统计区域 */
 .stats-box { font-size: 0.9rem; color: #ccc; text-align: center; line-height: 1.6; }
-
-/* 成就列表项 */
 .ach-item {
     display: flex; align-items: center; gap: 10px;
     padding: 10px; margin-bottom: 8px;
     background: rgba(255,255,255,0.03); border: 1px solid #333;
     opacity: 0.5; filter: grayscale(1); transition: all 0.3s;
 }
-
 .ach-item.unlocked {
     opacity: 1; filter: grayscale(0);
     border-color: var(--ui-gold);
     background: linear-gradient(90deg, rgba(207,170,104,0.1), transparent);
 }
-
 .ach-img { font-size: 1.5rem; width: 40px; text-align: center; }
 .ach-detail { flex: 1; }
 .ach-h { color: var(--ui-gold); font-size: 0.9rem; margin-bottom: 2px; }
 .ach-d { color: #666; font-size: 0.7rem; }
 
-/* 成就弹窗通知 */
+/* 弹窗 */
 #ach-toast {
     position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
     background: #111; border: 1px solid var(--ui-gold);
@@ -204,38 +170,12 @@ button:disabled { border-color: #444; color: #444; pointer-events: none; }
 .ach-info .ach-title { color: #666; font-size: 0.7rem; text-transform: uppercase; }
 .ach-info .ach-name { color: var(--ui-gold); font-size: 0.9rem; font-weight: bold; }
 
-/* style.css 追加在最后 */
-
-/* 排行榜切换 Tabs */
-.lb-tabs {
-    display: flex;
-    border-bottom: 1px solid #333;
-    background: rgba(0,0,0,0.3);
+/* HUD & Hints */
+#hud { position: absolute; top: 40px; left: 20px; z-index: 5; font-size: 1rem; color: var(--ui-gold); }
+#controls-hint {
+    position: absolute; bottom: 8%; width: 100%; text-align: center;
+    color: #555; font-size: 0.9rem; pointer-events: none;
+    text-transform: uppercase; letter-spacing: 2px;
+    animation: pulse 2s infinite;
 }
-
-.lb-tab {
-    flex: 1;
-    text-align: center;
-    padding: 10px;
-    font-size: 0.8rem;
-    color: #666;
-    cursor: pointer;
-    transition: all 0.2s;
-    border-bottom: 2px solid transparent;
-}
-
-.lb-tab.active {
-    color: var(--ui-gold);
-    background: rgba(207, 170, 104, 0.05);
-    border-bottom: 2px solid var(--ui-gold);
-}
-
-.lb-tab:active {
-    background: rgba(255,255,255,0.05);
-}
-
-/* 针对结果页新增按钮的微调 */
-#result-ach-btn:active {
-    color: var(--ui-gold) !important;
-    border-color: var(--ui-gold) !important;
-}
+@keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
