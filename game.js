@@ -139,25 +139,64 @@ function resetGame() {
 
 function endGame() {
     state = 'END';
-    const fillRatio = liquidHeight / glassH;
+    const fillRatio = liquidHeight / glassH; // 这里的 glassH 是目标高度
     let score = 0;
     let mainText = "", cssClass = "", flavorText = "";
 
+    // 1. 溢出判定 (保持不变)
     if (fillRatio > 1.0) {
-        score = 0; mainText = "YOU SPILLED"; cssClass = "spilled"; flavorText = "贪婪的诅咒";
+        score = 0; 
+        mainText = "YOU SPILLED"; 
+        cssClass = "spilled"; 
+        flavorText = "贪婪蒙蔽了双眼";
         vibrate([50, 50, 200]);
-    } else if (fillRatio >= 0.95) {
-        score = Math.floor(fillRatio * 1000) + 500; mainText = "POUR RESTORED"; cssClass = "success"; flavorText = "传火成功";
-        vibrate([50, 100, 50, 100]);
-    } else if (fillRatio < 0.2) {
-        score = Math.floor(fillRatio * 100); mainText = "HOLLOWED"; cssClass = "spilled"; flavorText = "活尸化";
+    } 
+    // 2. 成功判定 (引入指数级难度)
+    else if (fillRatio >= 0.93) { // 稍微放宽下限，但高分更难
+        // 核心改动：使用指数函数 Math.pow 来计算分数
+        // (fillRatio - 0.93) / 0.07 将区间映射到 0~1
+        // Math.pow(x, 3) 让分数呈立方增长，越接近 1.0 分数飙升越快
+        
+        const difficultyCurve = Math.pow((fillRatio - 0.93) / 0.07, 4); // 4次方曲线，极难
+        score = 1000 + Math.floor(difficultyCurve * 500); 
+
+        // 评价文案区分
+        if (score >= 1480) {
+            mainText = "GODLIKE POUR";
+            flavorText = "神一般的技艺 (S+)";
+            cssClass = "success";
+            vibrate([100, 50, 100, 50, 100]); // 疯狂震动
+        } else if (score >= 1400) {
+            mainText = "LEGENDARY";
+            flavorText = "传火者的荣耀 (S)";
+            cssClass = "success";
+            vibrate([50, 100, 50]);
+        } else {
+            mainText = "WELL DONE";
+            flavorText = "尚可一战 (A)";
+            cssClass = "success";
+            vibrate(50);
+        }
+
+    } 
+    // 3. 失败判定
+    else if (fillRatio < 0.2) {
+        score = Math.floor(fillRatio * 100); 
+        mainText = "HOLLOWED"; 
+        cssClass = "spilled"; 
+        flavorText = "活尸化";
     } else {
-        score = Math.floor(fillRatio * 1000); mainText = "RETRIEVED"; cssClass = "success"; flavorText = "平平无奇";
+        // 普通区间 (20% - 93%) 分数极低，惩罚平庸
+        score = Math.floor(fillRatio * 800); 
+        mainText = "MEDIOCRE"; 
+        cssClass = "spilled"; // 用红色显示，羞辱平庸
+        flavorText = "平平无奇的余灰";
     }
 
+    // UI 显示
     resultText.innerText = mainText;
     resultText.className = cssClass;
-    resultDetail.innerHTML = `得分: ${score}<br><span style="font-size:0.8rem;color:#666">${flavorText}</span>`;
+    resultDetail.innerHTML = `得分: <span style="color:#fff;font-size:1.4em">${score}</span><br><span style="font-size:0.8rem;color:#666">${flavorText}</span>`;
     
     resultScreen.classList.remove('hidden');
     setTimeout(() => { resultText.classList.add('show-result'); }, 50);
