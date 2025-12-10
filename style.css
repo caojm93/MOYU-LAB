@@ -150,3 +150,56 @@ button:disabled { border-color: #444; color: #444; pointer-events: none; }
     animation: pulse 2s infinite;
 }
 @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+/* style.css 追加内容 */
+
+.hud-btn {
+    margin: 0; padding: 6px 12px; font-size: 0.8rem; 
+    background: rgba(0,0,0,0.6); border: 1px solid #444; 
+    color: var(--ui-gold); cursor: pointer; pointer-events: auto;
+}
+
+/* 统一面板样式 */
+.panel-common {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%; max-width: 400px; height: 75%;
+    background: var(--panel-bg); border: 1px solid var(--ui-gold);
+    z-index: 50; display: flex; flex-direction: column;
+    box-shadow: 0 0 50px rgba(0,0,0,1);
+}
+
+.ach-content { flex: 1; overflow-y: auto; padding: 15px; -webkit-overflow-scrolling: touch; }
+
+/* 统计区域 */
+.stats-box { font-size: 0.9rem; color: #ccc; text-align: center; line-height: 1.6; }
+
+/* 成就列表项 */
+.ach-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px; margin-bottom: 8px;
+    background: rgba(255,255,255,0.03); border: 1px solid #333;
+    opacity: 0.5; filter: grayscale(1); transition: all 0.3s;
+}
+
+.ach-item.unlocked {
+    opacity: 1; filter: grayscale(0);
+    border-color: var(--ui-gold);
+    background: linear-gradient(90deg, rgba(207,170,104,0.1), transparent);
+}
+
+.ach-img { font-size: 1.5rem; width: 40px; text-align: center; }
+.ach-detail { flex: 1; }
+.ach-h { color: var(--ui-gold); font-size: 0.9rem; margin-bottom: 2px; }
+.ach-d { color: #666; font-size: 0.7rem; }
+
+/* 成就弹窗通知 */
+#ach-toast {
+    position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
+    background: #111; border: 1px solid var(--ui-gold);
+    padding: 10px 20px; display: flex; align-items: center; gap: 15px;
+    z-index: 100; transition: bottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    width: 80%; max-width: 300px; box-shadow: 0 10px 30px #000;
+}
+#ach-toast.show { bottom: 30px; }
+.ach-info .ach-title { color: #666; font-size: 0.7rem; text-transform: uppercase; }
+.ach-info .ach-name { color: var(--ui-gold); font-size: 0.9rem; font-weight: bold; }
