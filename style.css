@@ -203,3 +203,39 @@ button:disabled { border-color: #444; color: #444; pointer-events: none; }
 #ach-toast.show { bottom: 30px; }
 .ach-info .ach-title { color: #666; font-size: 0.7rem; text-transform: uppercase; }
 .ach-info .ach-name { color: var(--ui-gold); font-size: 0.9rem; font-weight: bold; }
+
+/* style.css 追加在最后 */
+
+/* 排行榜切换 Tabs */
+.lb-tabs {
+    display: flex;
+    border-bottom: 1px solid #333;
+    background: rgba(0,0,0,0.3);
+}
+
+.lb-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    font-size: 0.8rem;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+}
+
+.lb-tab.active {
+    color: var(--ui-gold);
+    background: rgba(207, 170, 104, 0.05);
+    border-bottom: 2px solid var(--ui-gold);
+}
+
+.lb-tab:active {
+    background: rgba(255,255,255,0.05);
+}
+
+/* 针对结果页新增按钮的微调 */
+#result-ach-btn:active {
+    color: var(--ui-gold) !important;
+    border-color: var(--ui-gold) !important;
+}
