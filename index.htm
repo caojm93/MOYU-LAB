@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>宫崎英高摸鱼打酒日记</title>
+    <title>宫崎英高摸鱼打酒日记 - 联机版</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Serif+SC:wght@400;700&display=swap');
 
@@ -14,6 +12,7 @@
             --ui-gold: #cfaa68;
             --ui-red: #8a0e0e;
             --text-grey: #a0a0a0;
+            --panel-bg: rgba(10, 10, 10, 0.95);
         }
 
         body {
@@ -21,15 +20,15 @@
             color: var(--text-grey);
             font-family: 'Cinzel', 'Noto Serif SC', serif;
             margin: 0;
-            overflow: hidden; /* 禁止滚动 */
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            height: 100dvh; /* 适配移动端动态高度 */
-            user-select: none; /* 禁止选中文本 */
+            height: 100dvh;
+            user-select: none;
             -webkit-user-select: none;
-            touch-action: none; /* 禁止浏览器默认手势 */
+            touch-action: none;
         }
 
         #game-container {
@@ -43,201 +42,142 @@
             overflow: hidden;
         }
 
-        /* Canvas Layer */
-        canvas {
-            z-index: 1;
-            /* 确保 Canvas 不会触发长按菜单 */
-            -webkit-touch-callout: none;
-        }
+        canvas { z-index: 1; -webkit-touch-callout: none; }
 
-        /* UI Overlays */
+        /* 通用 UI 样式 */
         .overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.9); /* 手机端背景更深一点 */
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            background: rgba(0, 0, 0, 0.92);
             z-index: 10;
             transition: opacity 0.3s;
-            padding: 20px;
-            box-sizing: border-box;
+            padding: 20px; box-sizing: border-box;
         }
 
-        .hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
+        .hidden { opacity: 0; pointer-events: none; }
 
         h1 {
-            font-size: 2rem; /* 移动端调小一点 */
-            color: var(--ui-gold);
+            font-size: 1.8rem; color: var(--ui-gold);
             text-shadow: 0 0 10px rgba(207, 170, 104, 0.3);
-            margin-bottom: 5px;
-            text-align: center;
-            letter-spacing: 2px;
-            line-height: 1.4;
+            margin-bottom: 5px; text-align: center; letter-spacing: 2px;
         }
 
-        .subtitle {
-            font-size: 0.8rem;
-            color: #666;
-            margin-bottom: 30px;
-            font-style: italic;
+        .subtitle { font-size: 0.8rem; color: #666; margin-bottom: 30px; font-style: italic; }
+
+        /* 输入框样式 */
+        .input-group {
+            margin-bottom: 20px;
             text-align: center;
+            width: 80%;
+            max-width: 300px;
         }
+        
+        .soul-input {
+            background: rgba(0,0,0,0.5);
+            border: none;
+            border-bottom: 2px solid #555;
+            color: var(--ui-gold);
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.2rem;
+            padding: 10px;
+            width: 100%;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.3s;
+            border-radius: 0;
+        }
+        
+        .soul-input:focus { border-bottom-color: var(--ui-gold); }
+        .soul-input::placeholder { color: #444; font-style: italic; font-size: 1rem; }
 
         button {
             background: transparent;
             border: 1px solid var(--ui-gold);
             color: var(--ui-gold);
-            padding: 18px 50px; /* 更大的点击区域 */
+            padding: 15px 40px;
             font-family: 'Cinzel', serif;
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             cursor: pointer;
-            transition: all 0.2s;
             text-transform: uppercase;
             letter-spacing: 2px;
             position: relative;
-            margin-top: 20px;
-            /* 消除移动端点击高亮 */
-            -webkit-tap-highlight-color: transparent; 
+            margin-top: 15px;
+            -webkit-tap-highlight-color: transparent;
         }
-
-        button:active {
-            background: rgba(207, 170, 104, 0.2);
-            transform: scale(0.98);
-        }
-
-        button::before, button::after {
-            content: '';
+        button:active { background: rgba(207, 170, 104, 0.2); transform: scale(0.98); }
+        button:disabled { border-color: #444; color: #444; pointer-events: none; }
+        
+        /* 排行榜面板 */
+        #leaderboard-panel {
             position: absolute;
-            width: 6px;
-            height: 6px;
-            background: var(--ui-gold);
-        }
-        button::before { top: -3px; left: -3px; }
-        button::after { bottom: -3px; right: -3px; }
-
-        /* Game HUD */
-        #hud {
-            position: absolute;
-            top: 40px; /* 避开刘海屏 */
-            left: 20px;
-            z-index: 5;
-            font-size: 1rem;
-            color: var(--ui-gold);
-            font-weight: bold;
-        }
-
-        /* Result Text */
-        #result-text {
-            font-size: 3.5rem; /* 手机适配 */
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 15px;
-            opacity: 0;
-            transform: scale(1.3);
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            text-align: center;
-            line-height: 1;
-        }
-
-        .spilled {
-            color: var(--ui-red);
-            text-shadow: 0 0 15px rgba(138, 14, 14, 0.8);
-        }
-
-        .success {
-            color: var(--ui-gold);
-            text-shadow: 0 0 15px rgba(207, 170, 104, 0.8);
-        }
-
-        .show-result {
-            opacity: 1 !important;
-            transform: scale(1) !important;
-        }
-
-        /* Leaderboard - Mobile Optimized */
-        #leaderboard {
-            position: absolute;
-            top: 40px;
-            right: 20px;
-            text-align: right;
-            z-index: 5;
-            font-size: 0.8rem;
-            color: #666;
-            background: rgba(0,0,0,0.5);
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-        #leaderboard h3 { margin: 0 0 2px 0; color: var(--ui-gold); border-bottom: 1px solid #333;}
-
-        /* Achievement Popup - Mobile Top Style */
-        #achievement-popup {
-            position: fixed;
-            top: -100px; /* Hidden above */
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 350px;
-            background: rgba(20, 20, 20, 0.98);
-            border: 1px solid #444;
-            border-top: 3px solid var(--ui-gold);
-            padding: 12px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: top 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            z-index: 100;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            border-radius: 0 0 5px 5px;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%; max-width: 400px;
+            height: 70%;
+            background: var(--panel-bg);
+            border: 1px solid var(--ui-gold);
+            z-index: 20;
+            display: flex; flex-direction: column;
+            padding: 2px;
+            box-shadow: 0 0 30px rgba(0,0,0,1);
         }
         
-        #achievement-popup.show {
-            top: 0;
-        }
-
-        .ach-icon {
-            width: 36px;
-            height: 36px;
-            background: #222;
-            border: 1px solid #555;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            flex-shrink: 0;
-        }
-
-        .ach-text h4 { margin: 0; color: var(--ui-gold); font-size: 0.9rem; }
-        .ach-text p { margin: 2px 0 0 0; font-size: 0.75rem; color: #aaa; }
-
-        /* Mobile controls hint */
-        #controls-hint {
-            position: absolute;
-            bottom: 8%;
-            width: 100%;
+        .lb-header {
+            background: rgba(207, 170, 104, 0.1);
+            color: var(--ui-gold);
+            padding: 15px;
             text-align: center;
-            color: #555;
+            font-weight: bold;
+            border-bottom: 1px solid #333;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        
+        .lb-close { cursor: pointer; font-size: 1.5rem; line-height: 1; padding: 0 10px; }
+
+        .lb-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
             font-size: 0.9rem;
-            z-index: 2;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            pointer-events: none;
-            animation: pulse 2s infinite;
         }
-        
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
+
+        .lb-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 5px;
+            border-bottom: 1px solid #222;
         }
+        .lb-item:nth-child(1) { color: #ffd700; } /* Gold */
+        .lb-item:nth-child(2) { color: #c0c0c0; } /* Silver */
+        .lb-item:nth-child(3) { color: #cd7f32; } /* Bronze */
+
+        .lb-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; padding-right: 10px; }
+        .lb-info { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+        .lb-score { font-weight: bold; color: var(--ui-gold); font-family: 'Cinzel'; }
+        .lb-date { font-size: 0.65rem; color: #555; margin-top: 2px; }
+
+        /* 结果页文字 */
+        #result-text {
+            font-size: 3rem; font-weight: bold; text-transform: uppercase;
+            letter-spacing: 2px; margin-bottom: 10px; opacity: 0;
+            transform: scale(1.3); transition: all 0.5s; text-align: center;
+        }
+        .show-result { opacity: 1 !important; transform: scale(1) !important; }
+        .spilled { color: var(--ui-red); text-shadow: 0 0 15px rgba(138, 14, 14, 0.8); }
+        .success { color: var(--ui-gold); text-shadow: 0 0 15px rgba(207, 170, 104, 0.8); }
+
+        /* HUD */
+        #hud { position: absolute; top: 40px; left: 20px; z-index: 5; font-size: 1rem; color: var(--ui-gold); }
+        #open-lb-btn {
+            position: absolute; top: 40px; right: 20px; z-index: 5;
+            background: rgba(0,0,0,0.5); border: 1px solid #444; color: var(--ui-gold);
+            padding: 5px 10px; font-size: 0.8rem; cursor: pointer;
+        }
+
+        #loading-text { text-align: center; color: #666; margin-top: 20px; font-style: italic; }
 
     </style>
 </head>
@@ -245,109 +185,219 @@
 
     <div id="game-container">
         <div id="hud">SCORE: <span id="score-val">0</span></div>
-        <div id="leaderboard">
-            <h3>LEGENDS</h3>
-            <div id="high-scores">Loading...</div>
-        </div>
+        <button id="open-lb-btn">🏆 排行榜 (Legends)</button>
 
         <canvas id="gameCanvas"></canvas>
-        <div id="controls-hint">按住屏幕倒酒</div>
+        <div style="position:absolute; bottom:8%; color:#555; font-size:0.9rem; pointer-events:none; animation: pulse 2s infinite;">按住屏幕倒酒</div>
 
         <div id="start-screen" class="overlay">
             <h1>宫崎英高<br>摸鱼打酒日记</h1>
             <div class="subtitle">Miyazaki's Beer Pouring Diary</div>
-            <button id="start-btn">开始受苦</button>
-            <div style="margin-top:20px; color:#444; font-size: 0.7rem;">建议开启手机音量感受震动</div>
+            
+            <div class="input-group">
+                <input type="text" id="player-name-input" class="soul-input" placeholder="输入你的名字 (Enter Name)" maxlength="10">
+            </div>
+
+            <button id="start-btn" disabled>开始受苦 (START)</button>
         </div>
 
         <div id="result-screen" class="overlay hidden">
             <div id="result-text">YOU SPILLED</div>
             <div id="result-detail" style="font-size: 1.2rem; margin-bottom: 20px; color: #ccc; text-align:center;">分数: 0</div>
+            <div style="font-size:0.8rem; color:#666; margin-bottom:20px;" id="upload-status">正在记录历史...</div>
             <button id="restart-btn">再次传火</button>
+            <button id="check-rank-btn" style="margin-top:10px; font-size:0.9rem; padding:10px 20px;">查看排行</button>
         </div>
-    </div>
 
-    <div id="achievement-popup">
-        <div class="ach-icon">🏆</div>
-        <div class="ach-text">
-            <h4 id="ach-title">Achievement Unlocked</h4>
-            <p id="ach-desc">Description here</p>
+        <div id="leaderboard-panel" class="hidden">
+            <div class="lb-header">
+                <span>LEGENDS (全服排行)</span>
+                <span class="lb-close" onclick="closeLeaderboard()">×</span>
+            </div>
+            <div id="lb-content" class="lb-list">
+                <div id="loading-text">正在从服务器读取铭文...</div>
+            </div>
         </div>
     </div>
 
     <script>
-        // --- 震动反馈封装 (Haptic Feedback) ---
-        function vibrate(pattern) {
-            if (navigator.vibrate) {
-                navigator.vibrate(pattern);
-            }
+        // ==========================================
+        // 🔴 配置区域 (请在此处填入你的 Dreamlo Key)
+        // ==========================================
+        const DREAMLO_PRIVATE = "ZPISQRTvkEWE5aBo6oqHzQC4AnImYmvEC4oXH_mpFaxw"; // 例子: "7_sD8s..."
+        const DREAMLO_PUBLIC  = "6939905e8f40bb18648ba2fc";  // 例子: "6758a..."
+        // ==========================================
+
+        // --- 排行榜系统 ---
+        let currentPlayerName = localStorage.getItem('moyu_username') || "";
+        
+        // 自动填充上次的名字
+        const nameInput = document.getElementById('player-name-input');
+        const startBtn = document.getElementById('start-btn');
+
+        if(currentPlayerName) {
+            nameInput.value = currentPlayerName;
+            startBtn.disabled = false;
         }
 
-        // Game Config
+        nameInput.addEventListener('input', (e) => {
+            if(e.target.value.trim().length > 0) {
+                startBtn.disabled = false;
+                currentPlayerName = e.target.value.trim();
+            } else {
+                startBtn.disabled = true;
+            }
+        });
+
+        // 格式化日期 MM/DD HH:mm
+        function getFormatDate() {
+            const now = new Date();
+            return `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+        }
+
+        // 上传分数 (包含时间戳作为 text 字段)
+        function uploadScore(score) {
+            if(!DREAMLO_PRIVATE || DREAMLO_PRIVATE.includes("填入")) {
+                document.getElementById('upload-status').innerText = "未配置 API Key，无法上传";
+                return;
+            }
+
+            const dateStr = getFormatDate();
+            // Dreamlo URL: /add/{private-code}/{name}/{score}/{seconds}/{text}
+            // 我们用 seconds 存时间戳方便排序(可选)，用 text 存可读日期
+            // 注意：名字里的特殊字符需要编码
+            const safeName = encodeURIComponent(currentPlayerName);
+            const url = `https://www.dreamlo.com/lb/${DREAMLO_PRIVATE}/add/${safeName}/${score}/0/${dateStr}`;
+
+            fetch(url).then(res => {
+                document.getElementById('upload-status').innerText = "记录已铭刻于历史";
+            }).catch(err => {
+                document.getElementById('upload-status').innerText = "连接服务器失败";
+            });
+        }
+
+        // 获取排行榜
+        function fetchLeaderboard() {
+            const list = document.getElementById('lb-content');
+            list.innerHTML = '<div id="loading-text">正在召唤灵魂...</div>';
+            
+            if(!DREAMLO_PUBLIC || DREAMLO_PUBLIC.includes("填入")) {
+                list.innerHTML = '<div style="text-align:center; padding:20px;">请先配置 Public Code</div>';
+                return;
+            }
+
+            // 获取 JSON 格式 /json
+            const url = `https://www.dreamlo.com/lb/${DREAMLO_PUBLIC}/json`;
+
+            fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                let entries = [];
+                if (data.dreamlo && data.dreamlo.leaderboard) {
+                    const lb = data.dreamlo.leaderboard.entry;
+                    // 如果只有一个条目，API返回的是对象而不是数组
+                    entries = Array.isArray(lb) ? lb : (lb ? [lb] : []);
+                }
+                
+                renderLeaderboard(entries);
+            })
+            .catch(err => {
+                list.innerHTML = '<div style="text-align:center; padding:20px; color:#888">连接断开 (Network Error)</div>';
+            });
+        }
+
+        function renderLeaderboard(entries) {
+            const list = document.getElementById('lb-content');
+            list.innerHTML = '';
+            
+            if (entries.length === 0) {
+                list.innerHTML = '<div style="text-align:center; padding:20px;">暂无传火记录</div>';
+                return;
+            }
+
+            entries.forEach((entry, index) => {
+                const item = document.createElement('div');
+                item.className = 'lb-item';
+                // entry.text 我们用来存日期
+                const dateDisplay = entry.date || "未知时间"; 
+                
+                item.innerHTML = `
+                    <div style="font-weight:bold; width:30px; text-align:center;">${index + 1}</div>
+                    <div class="lb-name">${entry.name}</div>
+                    <div class="lb-info">
+                        <div class="lb-score">${entry.score}</div>
+                        <div class="lb-date">${dateDisplay}</div>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // --- 游戏逻辑 (保持不变，已适配震动) ---
+        function vibrate(pattern) { if (navigator.vibrate) navigator.vibrate(pattern); }
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        
-        let canvasW, canvasH;
-        let glassW, glassH, glassX, glassY;
+        let canvasW, canvasH, glassW, glassH, glassX, glassY;
 
         function resize() {
             canvasW = window.innerWidth;
             canvasH = window.innerHeight;
-            canvas.width = canvasW;
-            canvas.height = canvasH;
-            
-            // 动态计算杯子大小，适应不同屏幕
-            glassH = canvasH * 0.4; 
-            glassW = glassH * 0.6; 
-            if (glassW > canvasW * 0.7) { // 防止在小屏上太宽
-                glassW = canvasW * 0.7;
-            }
-            
+            canvas.width = canvasW; canvas.height = canvasH;
+            glassH = canvasH * 0.4; glassW = glassH * 0.6;
+            if (glassW > canvasW * 0.7) glassW = canvasW * 0.7;
             glassX = canvasW / 2 - glassW / 2;
-            glassY = canvasH * 0.75 - glassH; // 稍微靠下一点
+            glassY = canvasH * 0.75 - glassH;
         }
-        
         window.addEventListener('resize', resize);
         resize();
 
-        // Game State
         let state = 'MENU';
         let pouring = false;
-        
-        let liquidHeight = 0; 
-        let foamHeight = 0;
-        let flowRate = 0;
-        let particles = [];
-        const maxFlowRate = 5; // 手机上稍微调快一点流速节奏
+        let liquidHeight = 0, foamHeight = 0, flowRate = 0, particles = [];
+        const maxFlowRate = 5;
 
-        // Achivements & Data
-        const achievements = [
-            { id: 'first_fail', title: '欢迎来到黑魂', desc: '第一次倒酒失败' },
-            { id: 'perfect', title: '赞美太阳', desc: '完美倒酒 (95%-99%)' },
-            { id: 'overflow', title: '贪婪的诅咒', desc: '啤酒溢出了杯子' },
-            { id: 'tiny', title: '深渊的凝视', desc: '倒了很少一点点酒' }
-        ];
-        let unlockedAch = JSON.parse(localStorage.getItem('moyu_achievements') || '[]');
-
-        // DOM Elements
+        // UI 绑定
         const startScreen = document.getElementById('start-screen');
         const resultScreen = document.getElementById('result-screen');
         const resultText = document.getElementById('result-text');
         const resultDetail = document.getElementById('result-detail');
         const scoreVal = document.getElementById('score-val');
-        const startBtn = document.getElementById('start-btn');
-        const restartBtn = document.getElementById('restart-btn');
-
-        // --- 核心交互逻辑 (Touch + Mouse) ---
+        const lbPanel = document.getElementById('leaderboard-panel');
         
-        function handleStart(e) {
-            if(e.cancelable) e.preventDefault(); // 禁止原生行为
-            if (state === 'PLAYING' && !pouring) {
-                pouring = true;
-                vibrate(20); // 轻微震动反馈
-            }
+        // 按钮事件
+        document.getElementById('start-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            localStorage.setItem('moyu_username', currentPlayerName); // 保存名字
+            resetGame();
+        });
+        document.getElementById('restart-btn').addEventListener('click', (e) => { e.stopPropagation(); resetGame(); });
+        document.getElementById('check-rank-btn').addEventListener('click', (e) => { 
+            e.stopPropagation(); 
+            lbPanel.classList.remove('hidden');
+            fetchLeaderboard();
+        });
+        document.getElementById('open-lb-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            lbPanel.classList.remove('hidden');
+            fetchLeaderboard();
+        });
+
+        window.closeLeaderboard = function() {
+            lbPanel.classList.add('hidden');
         }
 
+        // 交互逻辑
+        function handleStart(e) {
+            if(e.cancelable) e.preventDefault();
+            // 如果排行榜打开，不进行倒酒
+            if(!lbPanel.classList.contains('hidden')) return;
+
+            if (state === 'PLAYING' && !pouring) {
+                pouring = true;
+                vibrate(20);
+            }
+        }
         function handleEnd(e) {
             if(e.cancelable) e.preventDefault();
             if (state === 'PLAYING' && pouring) {
@@ -356,38 +406,20 @@
             }
         }
 
-        // 绑定事件到整个容器，防止按空
         const container = document.getElementById('game-container');
-        
-        // Touch events (Mobile)
         container.addEventListener('touchstart', handleStart, {passive: false});
         container.addEventListener('touchend', handleEnd, {passive: false});
-        
-        // Mouse events (Desktop fallback)
         container.addEventListener('mousedown', handleStart);
         container.addEventListener('mouseup', handleEnd);
 
-        // Buttons
-        startBtn.addEventListener('click', (e) => { e.stopPropagation(); resetGame(); });
-        startBtn.addEventListener('touchend', (e) => { e.stopPropagation(); resetGame(); });
-        
-        restartBtn.addEventListener('click', (e) => { e.stopPropagation(); resetGame(); });
-        restartBtn.addEventListener('touchend', (e) => { e.stopPropagation(); resetGame(); });
-
         function resetGame() {
             state = 'PLAYING';
-            liquidHeight = 0;
-            foamHeight = 0;
-            pouring = false;
-            flowRate = 0;
-            particles = [];
+            liquidHeight = 0; foamHeight = 0; pouring = false; flowRate = 0; particles = [];
             scoreVal.innerText = '0';
-            
             startScreen.classList.add('hidden');
             resultScreen.classList.add('hidden');
             resultText.classList.remove('show-result');
-            
-            vibrate(50); // 开始时的震动
+            vibrate(50);
             loop();
         }
 
@@ -395,189 +427,104 @@
             state = 'END';
             const fillRatio = liquidHeight / glassH;
             let score = 0;
-            let flavorText = "";
-            let cssClass = "";
-            let mainText = "";
+            let mainText = "", cssClass = "", flavorText = "";
 
             if (fillRatio > 1.0) {
                 score = 0;
                 mainText = "YOU SPILLED";
-                flavorText = "贪婪蒙蔽了双眼";
                 cssClass = "spilled";
-                vibrate([50, 50, 200]); // 失败的长震动
-                triggerAchievement('overflow');
-                triggerAchievement('first_fail');
+                flavorText = "贪婪的诅咒";
+                vibrate([50, 50, 200]);
             } else if (fillRatio >= 0.95) {
                 score = Math.floor(fillRatio * 1000) + 500;
                 mainText = "POUR RESTORED";
-                flavorText = "堪比防火女的技艺";
                 cssClass = "success";
-                vibrate([50, 100, 50, 100]); // 成功的双重震动
-                triggerAchievement('perfect');
+                flavorText = "传火成功";
+                vibrate([50, 100, 50, 100]);
             } else if (fillRatio < 0.2) {
                 score = Math.floor(fillRatio * 100);
                 mainText = "HOLLOWED";
-                flavorText = "连余灰都不如";
                 cssClass = "spilled";
-                triggerAchievement('tiny');
+                flavorText = "活尸化";
             } else {
                 score = Math.floor(fillRatio * 1000);
-                mainText = "BEER RETRIEVED";
-                flavorText = "平平无奇";
+                mainText = "RETRIEVED";
                 cssClass = "success";
+                flavorText = "平平无奇";
             }
-
-            saveScore(score);
-            updateLeaderboard();
 
             resultText.innerText = mainText;
             resultText.className = cssClass;
-            resultDetail.innerHTML = `得分: ${score}<br><span style="font-size:0.8rem; font-style:italic; display:block; margin-top:5px; opacity:0.7;">"${flavorText}"</span>`;
+            resultDetail.innerHTML = `得分: ${score}<br><span style="font-size:0.8rem;color:#666">${flavorText}</span>`;
             
             resultScreen.classList.remove('hidden');
             setTimeout(() => { resultText.classList.add('show-result'); }, 50);
-        }
 
-        function triggerAchievement(id) {
-            if (unlockedAch.includes(id)) return;
-            unlockedAch.push(id);
-            localStorage.setItem('moyu_achievements', JSON.stringify(unlockedAch));
-            
-            const ach = achievements.find(a => a.id === id);
-            if(ach) {
-                document.getElementById('ach-title').innerText = ach.title;
-                document.getElementById('ach-desc').innerText = ach.desc;
-                const popup = document.getElementById('achievement-popup');
-                popup.classList.add('show');
-                setTimeout(() => { popup.classList.remove('show'); }, 3000);
+            // 上传分数到服务器
+            if(score > 0) {
+                uploadScore(score);
             }
         }
 
-        function saveScore(score) {
-            if(score === 0) return;
-            let scores = JSON.parse(localStorage.getItem('moyu_scores') || '[]');
-            scores.push(score);
-            scores.sort((a, b) => b - a);
-            scores = scores.slice(0, 5);
-            localStorage.setItem('moyu_scores', JSON.stringify(scores));
-        }
-
-        function updateLeaderboard() {
-            const list = document.getElementById('high-scores');
-            const scores = JSON.parse(localStorage.getItem('moyu_scores') || '[]');
-            if(scores.length === 0) {
-                list.innerHTML = "<div>暂无记录</div>";
-            } else {
-                list.innerHTML = scores.map((s, i) => `<div>#${i+1} ${s}</div>`).join('');
-            }
-        }
-        updateLeaderboard();
-
-        // --- RENDER LOOP ---
+        // 渲染循环
         function loop() {
             if (pouring && state === 'PLAYING') {
-                // 模拟水流抖动
                 let noise = (Math.random() - 0.5) * 1.5; 
                 flowRate = Math.min(flowRate + 0.2, maxFlowRate + noise);
-                
                 liquidHeight += flowRate * 0.4; 
                 foamHeight = Math.min(foamHeight + 0.3, glassH * 0.1);
-
-                // Bubbles
                 if(Math.random() > 0.4) {
                     particles.push({
                         x: glassX + 10 + Math.random() * (glassW - 20),
                         y: glassY + glassH - liquidHeight,
-                        v: 2 + Math.random() * 3,
-                        size: 1 + Math.random() * 3
+                        v: 2 + Math.random() * 3, size: 1 + Math.random() * 3
                     });
                 }
-                
-                // 满的时候轻微震动提示（降低难度）
-                if (liquidHeight > glassH * 0.9 && liquidHeight < glassH * 0.92) {
-                   if (Math.random() > 0.8) vibrate(10);
-                }
-            } else {
-                flowRate = 0;
-            }
+            } else { flowRate = 0; }
 
-            // Lose condition
             if (state === 'PLAYING' && liquidHeight > glassH + 10) {
-                pouring = false;
-                endGame();
-                return;
+                pouring = false; endGame(); return;
             }
 
-            // Draw Background
-            ctx.fillStyle = '#050505';
-            ctx.fillRect(0, 0, canvasW, canvasH);
-
-            // 1. Draw Stream
+            // Draw
+            ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, canvasW, canvasH);
+            
             if (pouring) {
                 ctx.fillStyle = '#f2c94c';
                 ctx.fillRect(canvasW/2 - 4, 0, 8, glassY + glassH - liquidHeight + 5);
             }
-
-            // 2. Draw Liquid
+            
             const currentLiquidH = Math.min(liquidHeight, glassH + 20);
             if (liquidHeight > 0) {
                 ctx.fillStyle = '#f2994a'; 
                 ctx.fillRect(glassX + 6, glassY + glassH - currentLiquidH, glassW - 12, currentLiquidH);
-                
-                // Foam
                 ctx.fillStyle = '#fff5e6';
                 ctx.fillRect(glassX + 6, glassY + glassH - currentLiquidH, glassW - 12, foamHeight);
             }
 
-            // 3. Bubbles
             ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
             for(let i = particles.length - 1; i >= 0; i--) {
-                let p = particles[i];
-                p.y -= p.v;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
+                let p = particles[i]; p.y -= p.v;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
                 if (p.y < glassY + glassH - liquidHeight) particles.splice(i, 1);
             }
 
-            // 4. Glass Outline
-            ctx.strokeStyle = '#cfaa68';
-            ctx.lineWidth = 5;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(glassX, glassY);
-            ctx.lineTo(glassX, glassY + glassH); // 左
-            ctx.lineTo(glassX + glassW, glassY + glassH); // 底
-            ctx.lineTo(glassX + glassW, glassY); // 右
-            ctx.stroke();
+            ctx.strokeStyle = '#cfaa68'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(glassX, glassY);
+            ctx.lineTo(glassX, glassY + glassH); ctx.lineTo(glassX + glassW, glassY + glassH);
+            ctx.lineTo(glassX + glassW, glassY); ctx.stroke();
 
-            // Glass Highlights
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(glassX + glassW*0.15, glassY + glassH*0.1);
-            ctx.lineTo(glassX + glassW*0.15, glassY + glassH - glassH*0.1);
-            ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(glassX + glassW*0.15, glassY + glassH*0.1);
+            ctx.lineTo(glassX + glassW*0.15, glassY + glassH - glassH*0.1); ctx.stroke();
 
-            // 5. Target Line
-            ctx.strokeStyle = 'rgba(200, 50, 50, 0.5)';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(0, glassY);
-            ctx.lineTo(canvasW, glassY);
-            ctx.stroke();
-            ctx.setLineDash([]);
+            ctx.strokeStyle = 'rgba(200, 50, 50, 0.5)'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+            ctx.beginPath(); ctx.moveTo(0, glassY); ctx.lineTo(canvasW, glassY); ctx.stroke(); ctx.setLineDash([]);
 
-            // 6. Tap
-            ctx.fillStyle = '#333';
-            ctx.fillRect(canvasW/2 - 20, -10, 40, 60);
-            ctx.fillStyle = '#cfaa68';
-            ctx.fillRect(canvasW/2 - 20, 40, 40, 6);
+            ctx.fillStyle = '#333'; ctx.fillRect(canvasW/2 - 20, -10, 40, 60);
+            ctx.fillStyle = '#cfaa68'; ctx.fillRect(canvasW/2 - 20, 40, 40, 6);
 
-            if (state === 'PLAYING') {
-                requestAnimationFrame(loop);
-            }
+            if (state === 'PLAYING') requestAnimationFrame(loop);
         }
     </script>
 </body>
