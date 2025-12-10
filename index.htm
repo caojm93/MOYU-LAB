@@ -12,7 +12,6 @@
 <body>
     <div id="game-container">
         <div id="hud">SCORE: <span id="score-val">0</span></div>
-        
         <div style="position: absolute; top: 40px; right: 20px; z-index: 5; display: flex; gap: 10px;">
             <button id="open-lb-btn" class="hud-btn">🏆 排行榜</button>
             <button id="open-ach-btn" class="hud-btn">💀 成就</button>
@@ -34,23 +33,31 @@
             <div id="result-text">YOU SPILLED</div>
             <div id="result-detail">分数: 0</div>
             <div id="upload-status" style="margin-bottom: 10px; font-size: 0.8rem; color: #666;"></div>
+            
             <div class="btn-group">
                 <button id="restart-btn">再次传火</button>
                 <button id="check-rank-btn">查看排行</button>
             </div>
+            <button id="result-ach-btn" style="margin-top: 10px; font-size: 0.9rem; padding: 10px 20px; border-color: #666; color: #888;">查看我的成就</button>
         </div>
 
         <div id="leaderboard-panel" class="hidden panel-common">
             <div class="lb-header">
-                <span>LEGENDS (全服排行)</span>
+                <span>LEGENDS</span>
                 <span class="lb-close" onclick="closePanel('leaderboard-panel')">×</span>
             </div>
-            <div id="lb-content" class="lb-list"></div>
+            <div class="lb-tabs">
+                <div class="lb-tab active" data-type="score" onclick="switchLb('score')">最高分 (Score)</div>
+                <div class="lb-tab" data-type="count" onclick="switchLb('count')">受苦榜 (Deaths)</div>
+            </div>
+            <div id="lb-content" class="lb-list">
+                <div class="lb-loading">正在召唤灵魂...</div>
+            </div>
         </div>
 
         <div id="achievement-panel" class="hidden panel-common">
             <div class="lb-header">
-                <span>TROPHIES (受苦记录)</span>
+                <span>TROPHIES</span>
                 <span class="lb-close" onclick="closePanel('achievement-panel')">×</span>
             </div>
             <div class="ach-content">
@@ -62,7 +69,6 @@
                 <div id="ach-list"></div>
             </div>
         </div>
-        
         <div id="ach-toast">
             <div class="ach-icon">🏆</div>
             <div class="ach-info">
@@ -74,4 +80,5 @@
 
     <script src="game.js"></script>
 </body>
+</html>
 </html>
