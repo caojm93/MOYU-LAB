@@ -21,7 +21,8 @@ body {
     height: 100dvh; /* 移动端动态高度 */
     user-select: none;
     -webkit-user-select: none;
-    touch-action: none; /* 禁止浏览器默认手势 */
+    /* 关键：允许 touch-action 在部分元素上生效，但在 body 上默认禁止以防滚动 */
+    touch-action: none; 
 }
 
 #game-container {
@@ -62,13 +63,20 @@ h1 {
 
 .subtitle { font-size: 0.8rem; color: #666; margin-bottom: 30px; font-style: italic; }
 
-/* 输入框 */
-.input-group { width: 80%; max-width: 300px; margin-bottom: 20px; text-align: center; }
+/* --- 输入框 (修复版) --- */
+.input-group { width: 80%; max-width: 300px; margin-bottom: 20px; text-align: center; position: relative; z-index: 20; }
+
 .soul-input {
     background: transparent; border: none; border-bottom: 2px solid #555;
     color: var(--ui-gold); font-family: 'Noto Serif SC', serif;
     font-size: 1.2rem; padding: 10px; width: 100%; text-align: center;
     outline: none; transition: border-color 0.3s; border-radius: 0;
+    
+    /* 🔴 关键修复：强制允许选中和输入 */
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important; /* 允许点击操作 */
 }
 .soul-input:focus { border-bottom-color: var(--ui-gold); }
 
@@ -80,6 +88,9 @@ button {
     cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
     margin-top: 10px; -webkit-tap-highlight-color: transparent;
     transition: all 0.2s;
+    /* 🔴 修复按钮点击 */
+    pointer-events: auto !important; 
+    touch-action: manipulation;
 }
 button:active { background: rgba(207, 170, 104, 0.2); transform: scale(0.98); }
 button:disabled { border-color: #444; color: #444; pointer-events: none; }
@@ -93,7 +104,6 @@ button:disabled { border-color: #444; color: #444; pointer-events: none; }
     transform: scale(1.3); transition: all 0.5s; text-align: center;
 }
 #result-detail { font-size: 1.2rem; color: #ccc; margin-bottom: 10px; }
-#upload-status { font-size: 0.8rem; color: #666; font-style: italic; }
 .show-result { opacity: 1 !important; transform: scale(1) !important; }
 .spilled { color: var(--ui-red); text-shadow: 0 0 15px rgba(138, 14, 14, 0.8); }
 .success { color: var(--ui-gold); text-shadow: 0 0 15px rgba(207, 170, 104, 0.8); }
@@ -104,7 +114,8 @@ button:disabled { border-color: #444; color: #444; pointer-events: none; }
     transform: translate(-50%, -50%);
     width: 90%; max-width: 400px; height: 70%;
     background: var(--panel-bg); border: 1px solid var(--ui-gold);
-    z-index: 20; display: flex; flex-direction: column;
+    z-index: 50; /* 提高层级 */
+    display: flex; flex-direction: column;
     box-shadow: 0 0 50px rgba(0,0,0,1);
 }
 .lb-header {
@@ -113,7 +124,7 @@ button:disabled { border-color: #444; color: #444; pointer-events: none; }
     display: flex; justify-content: space-between; align-items: center;
 }
 .lb-close { cursor: pointer; padding: 0 10px; font-size: 1.5rem; }
-.lb-list { flex: 1; overflow-y: auto; padding: 10px; font-size: 0.9rem; }
+.lb-list { flex: 1; overflow-y: auto; padding: 10px; font-size: 0.9rem; -webkit-overflow-scrolling: touch; }
 .lb-item {
     display: flex; justify-content: space-between; align-items: center;
     padding: 10px 5px; border-bottom: 1px solid #222;
