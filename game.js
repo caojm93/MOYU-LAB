@@ -368,17 +368,18 @@ function updatePlayerStats(currentScore) {
 }
 
 // ✅ 核心更新：统一从 PlayerStats 读取排行榜
+// --- 替换 game.js 中的 fetchLeaderboard 函数 ---
+
 function fetchLeaderboard(type) {
     const list = document.getElementById('lb-content');
     list.innerHTML = '<div style="text-align:center;color:#666;padding:20px;">正在召唤灵魂...</div>';
     if(BMOB_APP_ID.includes("填入")) return;
 
     let url = "";
-    // 两个榜单都查询 PlayerStats 表，保证每人一行
     if (type === 'score') {
-        url = "https://api.bmobcloud.com/1/classes/PlayerStats?order=-highScore&limit=20";
+        url = "https://api.bmobcloud.com/1/classes/PlayerStats?order=-highScore&limit=50"; // 多取一点，方便前端去重
     } else {
-        url = "https://api.bmobcloud.com/1/classes/PlayerStats?order=-playCount&limit=20";
+        url = "https://api.bmobcloud.com/1/classes/PlayerStats?order=-playCount&limit=50";
     }
 
     fetch(url, {
@@ -389,12 +390,22 @@ function fetchLeaderboard(type) {
         list.innerHTML = '';
         if(!data.results || data.results.length === 0) { list.innerHTML = '<div style="text-align:center;padding:20px;">暂无记录</div>'; return; }
         
-        data.results.forEach((entry, i) => {
+        // 🛠️ 前端去重逻辑：确保每个名字只出现一次
+        const uniqueMap = new Map();
+        data.results.forEach(item => {
+            // 如果这个名字还没出现过，或者新数据的分数/次数更高，就存下来
+            if (!uniqueMap.has(item.playerName)) {
+                uniqueMap.set(item.playerName, item);
+            }
+        });
+        // 转回数组并截取前 20 名
+        const cleanList = Array.from(uniqueMap.values()).slice(0, 20);
+
+        cleanList.forEach((entry, i) => {
             let val = "";
             let label = "";
             if (type === 'score') {
                 val = entry.highScore || 0;
-                // 显示该条记录最后更新的时间（即最后一次打破记录或游玩的时间）
                 label = entry.updatedAt ? formatTime(entry.updatedAt) : ""; 
             } else {
                 val = entry.playCount;
