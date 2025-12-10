@@ -179,3 +179,25 @@ button:disabled { border-color: #444; color: #444; pointer-events: none; }
     animation: pulse 2s infinite;
 }
 @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+/* --- style.css 追加修复代码 --- */
+
+/* 🔴 核心修复：消灭幽灵按钮 */
+/* 当父容器有 .hidden 类时，强制禁止内部所有按钮的点击事件 */
+.hidden button,
+.hidden input {
+    pointer-events: none !important;
+    visibility: hidden; /* 双重保险：直接不可见 */
+}
+
+/* 确保显示时恢复可见 */
+.overlay:not(.hidden) button,
+.overlay:not(.hidden) input {
+    visibility: visible;
+}
+
+/* 优化 .hidden 的层级，确保它不会挡住下面的操作 */
+.hidden {
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1 !important; /* 关键：隐藏时扔到最底层 */
+}
