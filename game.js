@@ -5,13 +5,16 @@ const BMOB_APP_ID  = "909d88911b4256680a5bb5d9df1f84e2";
 const BMOB_API_KEY = "921bf8d038ac6e5a904e1fab0e8f7ac3";
 // ==========================================
 
-// --- 成就配置 ---
+// --- ✅ 新增：更丰富的成就配置 ---
 const ACHIEVEMENTS = [
-    { id: 'first_blood', icon: '🩸', title: '欢迎来到黑魂', desc: '第一次倒酒失败' },
-    { id: 'perfect',     icon: '🌞', title: '赞美太阳',    desc: '单次得分超过 1200 分' },
+    { id: 'first_blood', icon: '🩸', title: '初次受苦',    desc: '第一次倒酒失败' },
+    { id: 'hollow',      icon: '💀', title: '活尸化',      desc: '累计受苦达到 10 次' },
+    { id: 'abyss',       icon: '👁️', title: '深渊漫步者',  desc: '累计受苦达到 50 次' },
+    { id: 'perfect',     icon: '🔥', title: '传火者',      desc: '单次得分超过 1200 分' },
     { id: 'godlike',     icon: '👑', title: '薪王化身',    desc: '单次得分超过 1450 分' },
-    { id: 'hollow',      icon: '💀', title: '活尸化',      desc: '累计游玩达到 10 次' },
-    { id: 'greed',       icon: '😈', title: '贪婪的诅咒',  desc: '倒酒溢出 (失败)' }
+    { id: 'limit',       icon: '⚡', title: '极限操作',    desc: '得分超过 1490 分' },
+    { id: 'greed',       icon: '😈', title: '贪婪的诅咒',  desc: '倒酒溢出 (失败)' },
+    { id: 'tiny',        icon: '🤏', title: '深渊的凝视',  desc: '倒得太少 (<20%)' }
 ];
 
 // --- 全局变量 ---
@@ -22,6 +25,7 @@ let particles = [];
 let currentPlayerName = localStorage.getItem('moyu_username') || "";
 let myPlayCount = parseInt(localStorage.getItem('moyu_playcount') || '0');
 let myUnlockedAch = JSON.parse(localStorage.getItem('moyu_achievements') || '[]');
+let currentLbType = 'score'; // 'score' 或 'count'
 
 // DOM 元素
 const canvas = document.getElementById('gameCanvas');
@@ -78,26 +82,38 @@ document.getElementById('restart-btn').addEventListener('click', (e) => { e.stop
 // 面板控制
 function openPanel(id) {
     document.getElementById(id).classList.remove('hidden');
-    if(id === 'leaderboard-panel') fetchLeaderboard();
+    if(id === 'leaderboard-panel') fetchLeaderboard(currentLbType);
     if(id === 'achievement-panel') renderAchievements();
 }
 window.closePanel = function(id) { document.getElementById(id).classList.add('hidden'); }
+// 切换排行榜类型
+window.switchLb = function(type) {
+    currentLbType = type;
+    // 更新 Tab 样式
+    document.querySelectorAll('.lb-tab').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.lb-tab[data-type="${type}"]`).classList.add('active');
+    fetchLeaderboard(type);
+}
 
 document.getElementById('check-rank-btn').addEventListener('click', (e) => { e.stopPropagation(); openPanel('leaderboard-panel'); });
 document.getElementById('open-lb-btn').addEventListener('click', (e) => { e.stopPropagation(); openPanel('leaderboard-panel'); });
 document.getElementById('open-ach-btn').addEventListener('click', (e) => { e.stopPropagation(); openPanel('achievement-panel'); });
 
+// ✅ 新增：结果页的“查看成就”按钮
+document.getElementById('result-ach-btn').addEventListener('click', (e) => { 
+    e.stopPropagation(); 
+    openPanel('achievement-panel'); 
+});
+
 // 触控处理 (含白名单)
 const container = document.getElementById('game-container');
 function handleStart(e) {
     const tag = e.target.tagName;
-    // 白名单：输入框、按钮、关闭图标、面板内部
-    if (tag === 'INPUT' || tag === 'BUTTON' || e.target.classList.contains('lb-close') || e.target.closest('.panel-common')) {
+    // 白名单：输入框、按钮、关闭图标、面板内部、Tab标签
+    if (tag === 'INPUT' || tag === 'BUTTON' || e.target.classList.contains('lb-close') || e.target.classList.contains('lb-tab') || e.target.closest('.panel-common')) {
         return; 
     }
     if(e.cancelable) e.preventDefault();
-    
-    // 如果任何面板打开中，不倒酒
     if(!document.getElementById('leaderboard-panel').classList.contains('hidden')) return;
     if(!document.getElementById('achievement-panel').classList.contains('hidden')) return;
 
@@ -108,10 +124,10 @@ function handleStart(e) {
 }
 function handleEnd(e) {
     const tag = e.target.tagName;
-    if (tag === 'INPUT' || tag === 'BUTTON' || e.target.classList.contains('lb-close')) return;
+    if (tag === 'INPUT' || tag === 'BUTTON' || e.target.classList.contains('lb-close') || e.target.classList.contains('lb-tab')) return;
     if(e.cancelable) e.preventDefault();
     if (state === 'PLAYING' && pouring) {
-        pouring = false; // 惯性模式：仅松手，不立即结算
+        pouring = false; 
     }
 }
 container.addEventListener('touchstart', handleStart, {passive: false});
@@ -132,13 +148,12 @@ function resetGame() {
     loop();
 }
 
-// 物理循环 (含惯性)
 function loop() {
     if (pouring && state === 'PLAYING') {
-        flowRate = Math.min(flowRate + 0.15, 5.5); // 加速
+        flowRate = Math.min(flowRate + 0.15, 5.5); 
     } else {
         if (flowRate > 0) {
-            flowRate -= 0.25; // 惯性减速
+            flowRate -= 0.25; 
             if (flowRate < 0) flowRate = 0;
         }
     }
@@ -155,14 +170,12 @@ function loop() {
         }
     }
 
-    // 溢出判定
     if (state === 'PLAYING' && liquidHeight > glassH + 3) {
         pouring = false; flowRate = 0;
-        endGame(true); // true = spilled
+        endGame(true);
         return;
     }
     
-    // 停止判定
     if (state === 'PLAYING' && !pouring && flowRate <= 0 && liquidHeight > 0) {
         endGame(false);
         return;
@@ -201,45 +214,50 @@ function loop() {
     if (state === 'PLAYING') requestAnimationFrame(loop);
 }
 
-// --- 结算与成就逻辑 ---
+// --- 结算逻辑 ---
 function endGame(spilled) {
     state = 'END';
     const fillRatio = liquidHeight / glassH;
     let score = 0;
     let mainText="", cssClass="", flavorText="";
 
-    // 更新本地游玩次数
     myPlayCount++;
     localStorage.setItem('moyu_playcount', myPlayCount);
     
-    // 检查成就: 活尸化
+    // ✅ 成就检查：次数
     if(myPlayCount >= 10) unlockAch('hollow');
+    if(myPlayCount >= 50) unlockAch('abyss');
 
     if (spilled) {
         score = 0; mainText = "YOU SPILLED"; cssClass = "spilled"; flavorText = "贪婪蒙蔽了双眼";
         vibrate([50, 50, 200]);
-        // 检查成就: 失败 & 溢出
         if(myPlayCount === 1) unlockAch('first_blood'); 
         unlockAch('greed');
     } else {
         if (fillRatio >= 0.93) {
             const curve = Math.pow((fillRatio - 0.93) / 0.07, 4);
             score = 1000 + Math.floor(curve * 500);
-            if (score >= 1480) {
+            
+            if (score >= 1490) {
                 mainText = "GODLIKE"; flavorText = "神一般的技艺 (S+)"; cssClass = "success";
                 vibrate([100, 50, 100, 50, 100]);
+                unlockAch('godlike'); unlockAch('limit'); // 解锁双重成就
+            } else if (score >= 1450) {
+                mainText = "LORD OF CINDER"; flavorText = "薪王化身 (S)"; cssClass = "success";
+                vibrate([80, 80, 80]);
                 unlockAch('godlike');
             } else if (score >= 1200) {
-                mainText = "LEGENDARY"; flavorText = "传火者的荣耀 (S)"; cssClass = "success";
+                mainText = "LEGENDARY"; flavorText = "传火者的荣耀 (A)"; cssClass = "success";
                 vibrate([50, 100, 50]);
                 unlockAch('perfect');
             } else {
-                mainText = "WELL DONE"; flavorText = "尚可一战 (A)"; cssClass = "success";
+                mainText = "WELL DONE"; flavorText = "尚可一战 (B)"; cssClass = "success";
                 vibrate(50);
             }
         } else if (fillRatio < 0.2) {
             score = Math.floor(fillRatio * 100); mainText = "HOLLOWED"; cssClass = "spilled"; flavorText = "活尸化";
             if(myPlayCount === 1) unlockAch('first_blood');
+            unlockAch('tiny');
         } else {
             score = Math.floor(fillRatio * 800); mainText = "MEDIOCRE"; cssClass = "spilled"; flavorText = "平平无奇的余灰";
         }
@@ -252,17 +270,14 @@ function endGame(spilled) {
     resultScreen.classList.remove('hidden');
     setTimeout(() => { resultText.classList.add('show-result'); }, 50);
 
-    // 云端同步
     if(score > 0) uploadScore(score);
-    updatePlayerStats(); // 更新受苦次数
+    updatePlayerStats();
 }
 
 function unlockAch(id) {
     if(myUnlockedAch.includes(id)) return;
     myUnlockedAch.push(id);
     localStorage.setItem('moyu_achievements', JSON.stringify(myUnlockedAch));
-    
-    // 显示弹窗
     const achData = ACHIEVEMENTS.find(a => a.id === id);
     if(achData) {
         document.getElementById('toast-name').innerText = achData.title;
@@ -293,13 +308,11 @@ function renderAchievements() {
 
 // --- Bmob API ---
 function vibrate(p) { if(navigator.vibrate) navigator.vibrate(p); }
-
 function formatTime(iso) {
     const d = new Date(iso);
     return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes() < 10 ? '0'+d.getMinutes() : d.getMinutes()}`;
 }
 
-// 1. 上传分数 (GameScore)
 function uploadScore(score) {
     if(BMOB_APP_ID.includes("填入")) { uploadStatus.innerText = "API Key 未配置"; return; }
     uploadStatus.innerText = "正在铭刻...";
@@ -310,19 +323,15 @@ function uploadScore(score) {
     }).then(() => uploadStatus.innerText = "分数已铭刻").catch(() => uploadStatus.innerText = "连接失败");
 }
 
-// 2. 更新受苦次数 (PlayerStats) - 稍微复杂，需要先查后更
 function updatePlayerStats() {
     if(BMOB_APP_ID.includes("填入")) return;
     const headers = { 'Content-Type': 'application/json', 'X-Bmob-Application-Id': BMOB_APP_ID, 'X-Bmob-REST-API-Key': BMOB_API_KEY };
-    
-    // 第一步：查询该玩家是否存在
     const queryUrl = `https://api.bmobcloud.com/1/classes/PlayerStats?where={"playerName":"${currentPlayerName}"}`;
     
     fetch(queryUrl, { method: 'GET', headers: headers })
     .then(res => res.json())
     .then(data => {
         if(data.results && data.results.length > 0) {
-            // 玩家存在，更新次数 (+1)
             const objId = data.results[0].objectId;
             const currentCount = data.results[0].playCount || 0;
             fetch(`https://api.bmobcloud.com/1/classes/PlayerStats/${objId}`, {
@@ -330,7 +339,6 @@ function updatePlayerStats() {
                 body: JSON.stringify({ playCount: currentCount + 1 })
             });
         } else {
-            // 玩家不存在，创建新记录
             fetch(`https://api.bmobcloud.com/1/classes/PlayerStats`, {
                 method: 'POST', headers: headers,
                 body: JSON.stringify({ playerName: currentPlayerName, playCount: 1 })
@@ -339,27 +347,52 @@ function updatePlayerStats() {
     });
 }
 
-// 3. 获取排行榜
-function fetchLeaderboard() {
+// ✅ 修改：支持切换榜单的排行榜函数
+function fetchLeaderboard(type) {
     const list = document.getElementById('lb-content');
     list.innerHTML = '<div style="text-align:center;color:#666;padding:20px;">正在召唤灵魂...</div>';
     if(BMOB_APP_ID.includes("填入")) return;
 
-    fetch("https://api.bmobcloud.com/1/classes/GameScore?order=-score&limit=20", {
+    let url = "";
+    // 根据类型决定查询哪张表
+    if (type === 'score') {
+        // 查询 GameScore 表，按分数降序
+        url = "https://api.bmobcloud.com/1/classes/GameScore?order=-score&limit=20";
+    } else {
+        // 查询 PlayerStats 表，按次数降序
+        url = "https://api.bmobcloud.com/1/classes/PlayerStats?order=-playCount&limit=20";
+    }
+
+    fetch(url, {
         headers: { 'X-Bmob-Application-Id': BMOB_APP_ID, 'X-Bmob-REST-API-Key': BMOB_API_KEY }
     })
     .then(res => res.json())
     .then(data => {
         list.innerHTML = '';
         if(!data.results || data.results.length === 0) { list.innerHTML = '<div style="text-align:center;padding:20px;">暂无记录</div>'; return; }
+        
         data.results.forEach((entry, i) => {
+            let val = "";
+            let label = "";
+            
+            if (type === 'score') {
+                val = entry.score;
+                label = formatTime(entry.createdAt); // 分数榜显示时间
+            } else {
+                val = entry.playCount;
+                label = "次受苦"; // 受苦榜显示文字
+            }
+
+            // 特殊样式：受苦榜用红色显示
+            const scoreColor = type === 'score' ? 'var(--ui-gold)' : 'var(--ui-red)';
+
             list.innerHTML += `
                 <div class="lb-item">
                     <div style="font-weight:bold;width:25px;">${i+1}</div>
                     <div class="lb-name">${entry.playerName}</div>
                     <div style="text-align:right;">
-                        <span class="lb-score">${entry.score}</span>
-                        <span class="lb-date">${formatTime(entry.createdAt)}</span>
+                        <span class="lb-score" style="color:${scoreColor}">${val}</span>
+                        <span class="lb-date">${label}</span>
                     </div>
                 </div>`;
         });
