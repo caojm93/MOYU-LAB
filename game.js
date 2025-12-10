@@ -72,13 +72,16 @@ nameInput.addEventListener('input', (e) => {
 });
 
 startBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
+    e.stopPropagation(); // 防止点击穿透
+    console.log("点击了开始游戏"); // 调试信息
     localStorage.setItem('moyu_username', currentPlayerName);
     resetGame();
 });
 
-document.getElementById('restart-btn').addEventListener('click', (e) => { e.stopPropagation(); resetGame(); });
-
+document.getElementById('restart-btn').addEventListener('click', (e) => { 
+    e.stopPropagation(); 
+    resetGame(); 
+});
 // 面板控制
 function openPanel(id) {
     document.getElementById(id).classList.remove('hidden');
@@ -86,7 +89,6 @@ function openPanel(id) {
     if(id === 'achievement-panel') renderAchievements();
 }
 window.closePanel = function(id) { document.getElementById(id).classList.add('hidden'); }
-
 window.switchLb = function(type) {
     currentLbType = type;
     document.querySelectorAll('.lb-tab').forEach(el => el.classList.remove('active'));
