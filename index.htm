@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宫崎英高摸鱼打酒日记</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Serif+SC:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #050505;
+            --ui-gold: #cfaa68;
+            --ui-red: #8a0e0e;
+            --text-grey: #a0a0a0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-grey);
+            font-family: 'Cinzel', 'Noto Serif SC', serif;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Canvas Layer */
+        canvas {
+            border-bottom: 2px solid #333;
+            z-index: 1;
+        }
+
+        /* UI Overlays */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 10;
+            transition: opacity 0.5s;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--ui-gold);
+            text-shadow: 0 0 10px rgba(207, 170, 104, 0.3);
+            margin-bottom: 10px;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 40px;
+            font-style: italic;
+        }
+
+        button {
+            background: transparent;
+            border: 1px solid var(--ui-gold);
+            color: var(--ui-gold);
+            padding: 15px 40px;
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+        }
+
+        button:hover {
+            background: rgba(207, 170, 104, 0.1);
+            box-shadow: 0 0 15px rgba(207, 170, 104, 0.2);
+        }
+
+        button::before, button::after {
+            content: '';
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--ui-gold);
+            transition: all 0.3s;
+        }
+        button::before { top: -2px; left: -2px; }
+        button::after { bottom: -2px; right: -2px; }
+
+        /* Game HUD */
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 5;
+            font-size: 1.2rem;
+            color: var(--ui-gold);
+        }
+
+        /* Result Text (YOU DIED style) */
+        #result-text {
+            font-size: 5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            margin-bottom: 20px;
+            opacity: 0;
+            transform: scale(1.2);
+            transition: all 2s ease-out;
+            text-align: center;
+        }
+
+        .spilled {
+            color: var(--ui-red);
+            text-shadow: 0 0 20px rgba(138, 14, 14, 0.5);
+        }
+
+        .success {
+            color: var(--ui-gold);
+            text-shadow: 0 0 20px rgba(207, 170, 104, 0.5);
+        }
+
+        .show-result {
+            opacity: 1 !important;
+            transform: scale(1) !important;
+        }
+
+        /* Leaderboard */
+        #leaderboard {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            text-align: right;
+            z-index: 5;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        #leaderboard h3 { margin: 0 0 5px 0; color: var(--ui-gold); border-bottom: 1px solid #333;}
+
+        /* Achievement Popup */
+        #achievement-popup {
+            position: fixed;
+            bottom: 30px;
+            right: -300px; /* Hidden */
+            width: 280px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid #444;
+            border-left: 3px solid var(--ui-gold);
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: right 0.5s ease-out;
+            z-index: 20;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        
+        #achievement-popup.show {
+            right: 30px;
+        }
+
+        .ach-icon {
+            width: 40px;
+            height: 40px;
+            background: #222;
+            border: 1px solid #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .ach-text h4 { margin: 0; color: var(--ui-gold); font-size: 0.9rem; }
+        .ach-text p { margin: 2px 0 0 0; font-size: 0.75rem; color: #aaa; }
+
+        /* Mobile controls hint */
+        #controls-hint {
+            position: absolute;
+            bottom: 10%;
+            color: #444;
+            font-size: 0.8rem;
+            z-index: 2;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="hud">SCORE: <span id="score-val">0</span></div>
+        <div id="leaderboard">
+            <h3>LEGENDS (排行榜)</h3>
+            <div id="high-scores"></div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+        <div id="controls-hint">按住屏幕 / 鼠标倒酒 (HOLD TO POUR)</div>
+
+        <div id="start-screen" class="overlay">
+            <h1>宫崎英高<br>摸鱼打酒日记</h1>
+            <div class="subtitle">Miyazaki's Beer Pouring Diary</div>
+            <button id="start-btn">开始受苦 (START)</button>
+        </div>
+
+        <div id="result-screen" class="overlay hidden">
+            <div id="result-text">YOU SPILLED</div>
+            <div id="result-detail" style="font-size: 1.5rem; margin-bottom: 30px; color: #ccc;">分数: 0</div>
+            <div id="share-hint" style="font-size: 0.8rem; color: #555; margin-bottom: 20px;">[ 按下 F12 + Shift + S 截图分享荣耀 ]</div>
+            <button id="restart-btn">再次传火 (RETRY)</button>
+        </div>
+    </div>
+
+    <div id="achievement-popup">
+        <div class="ach-icon">🏆</div>
+        <div class="ach-text">
+            <h4 id="ach-title">Achievement Unlocked</h4>
+            <p id="ach-desc">Description here</p>
+        </div>
+    </div>
+
+    <script>
+        // Game Configuration
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Responsive Canvas
+        function resize() {
+            canvas.width = window.innerWidth > 600 ? 400 : window.innerWidth - 40;
+            canvas.height = window.innerHeight * 0.6;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Game State
+        let state = 'MENU'; // MENU, PLAYING, END
+        let pouring = false;
+        
+        // Physics variables
+        let liquidHeight = 0; // Current height in pixels
+        let foamHeight = 0;
+        let flowRate = 0;
+        let particles = [];
+        
+        // Constants
+        const glassWidth = 120;
+        const glassHeight = 250;
+        const maxFlowRate = 3.5;
+        const glassX = () => canvas.width / 2 - glassWidth / 2;
+        const glassY = () => canvas.height - 50 - glassHeight;
+
+        // Achievements Data
+        const achievements = [
+            { id: 'first_fail', title: '欢迎来到黑魂', desc: '第一次倒酒失败' },
+            { id: 'perfect', title: '赞美太阳', desc: '完美倒酒 (95%-99%)' },
+            { id: 'overflow', title: '贪婪的诅咒', desc: '啤酒溢出了杯子' },
+            { id: 'tiny', title: '深渊的凝视', desc: '倒了很少一点点酒' }
+        ];
+        let unlockedAch = JSON.parse(localStorage.getItem('moyu_achievements') || '[]');
+
+        // DOM Elements
+        const startScreen = document.getElementById('start-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const resultText = document.getElementById('result-text');
+        const resultDetail = document.getElementById('result-detail');
+        const scoreVal = document.getElementById('score-val');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+
+        // Input Handling
+        function startPour() {
+            if (state === 'PLAYING') pouring = true;
+        }
+        function stopPour() {
+            if (state === 'PLAYING' && pouring) {
+                pouring = false;
+                endGame();
+            }
+        }
+
+        // Support both Touch and Mouse
+        window.addEventListener('mousedown', startPour);
+        window.addEventListener('mouseup', stopPour);
+        window.addEventListener('touchstart', (e) => { e.preventDefault(); startPour(); }, {passive: false});
+        window.addEventListener('touchend', (e) => { e.preventDefault(); stopPour(); });
+
+        startBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent immediate pour
+            resetGame();
+        });
+        
+        restartBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetGame();
+        });
+
+        function resetGame() {
+            state = 'PLAYING';
+            liquidHeight = 0;
+            foamHeight = 0;
+            pouring = false;
+            flowRate = 0;
+            particles = [];
+            scoreVal.innerText = '0';
+            
+            startScreen.classList.add('hidden');
+            resultScreen.classList.add('hidden');
+            resultText.className = ''; // clear classes
+            resultText.classList.remove('show-result');
+            
+            loop();
+        }
+
+        function endGame() {
+            state = 'END';
+            const fillRatio = liquidHeight / glassHeight;
+            let score = 0;
+            let flavorText = "";
+            let cssClass = "";
+            let mainText = "";
+
+            // Logic Judgment
+            if (fillRatio > 1.0) {
+                // FAIL
+                score = 0;
+                mainText = "YOU SPILLED"; // 溢出
+                flavorText = "贪婪蒙蔽了你的双眼";
+                cssClass = "spilled";
+                triggerAchievement('overflow');
+                triggerAchievement('first_fail');
+            } else if (fillRatio >= 0.95) {
+                // PERFECT
+                score = Math.floor(fillRatio * 1000) + 500; // Bonus
+                mainText = "POUR RESTORED"; // 注入成功
+                flavorText = "堪比防火女的技艺";
+                cssClass = "success";
+                triggerAchievement('perfect');
+            } else if (fillRatio < 0.2) {
+                // TOO LOW
+                score = Math.floor(fillRatio * 100);
+                mainText = "HOLLOWED"; // 活尸化
+                flavorText = "这点酒连余灰都不如";
+                cssClass = "spilled";
+                triggerAchievement('tiny');
+            } else {
+                // NORMAL
+                score = Math.floor(fillRatio * 1000);
+                mainText = "BEER RETRIEVED"; // 取得啤酒
+                flavorText = "平平无奇的打酒技艺";
+                cssClass = "success";
+            }
+
+            // Save Score
+            saveScore(score);
+            updateLeaderboard();
+
+            // Show UI
+            resultText.innerText = mainText;
+            resultText.className = cssClass; // apply color
+            resultDetail.innerHTML = `得分: ${score}<br><span style="font-size:0.8rem; font-style:italic; margin-top:10px; display:block;">"${flavorText}"</span>`;
+            
+            resultScreen.classList.remove('hidden');
+            // Trigger animation
+            setTimeout(() => {
+                resultText.classList.add('show-result');
+            }, 100);
+        }
+
+        function triggerAchievement(id) {
+            if (unlockedAch.includes(id)) return;
+            
+            const ach = achievements.find(a => a.id === id);
+            if(ach) {
+                unlockedAch.push(id);
+                localStorage.setItem('moyu_achievements', JSON.stringify(unlockedAch));
+                
+                // Show Popup
+                const popup = document.getElementById('achievement-popup');
+                document.getElementById('ach-title').innerText = ach.title;
+                document.getElementById('ach-desc').innerText = ach.desc;
+                popup.classList.add('show');
+                
+                setTimeout(() => {
+                    popup.classList.remove('show');
+                }, 4000);
+            }
+        }
+
+        function saveScore(score) {
+            if(score === 0) return;
+            let scores = JSON.parse(localStorage.getItem('moyu_scores') || '[]');
+            scores.push(score);
+            scores.sort((a, b) => b - a);
+            scores = scores.slice(0, 5); // Keep top 5
+            localStorage.setItem('moyu_scores', JSON.stringify(scores));
+        }
+
+        function updateLeaderboard() {
+            const list = document.getElementById('high-scores');
+            const scores = JSON.parse(localStorage.getItem('moyu_scores') || '[]');
+            list.innerHTML = scores.map((s, i) => `<div>#${i+1} - ${s} pts</div>`).join('');
+        }
+        
+        // Initialize Leaderboard on load
+        updateLeaderboard();
+
+        // --- RENDER LOOP ---
+        function loop() {
+            // Update Physics
+            if (pouring && state === 'PLAYING') {
+                // Add randomness to flow (Shakey hands effect)
+                let noise = (Math.random() - 0.5) * 0.5; 
+                flowRate = Math.min(flowRate + 0.1, maxFlowRate + noise);
+                
+                liquidHeight += flowRate * 0.5; // Fill speed
+                foamHeight = Math.min(foamHeight + 0.2, 20); // Foam grows
+
+                // Particles (Bubbles)
+                if(Math.random() > 0.5) {
+                    particles.push({
+                        x: glassX() + 10 + Math.random() * (glassWidth - 20),
+                        y: glassY() + glassHeight - liquidHeight,
+                        v: 1 + Math.random() * 2,
+                        size: 1 + Math.random() * 2
+                    });
+                }
+            } else {
+                flowRate = 0;
+            }
+
+            // Lose condition: Overflow during pour
+            if (state === 'PLAYING' && liquidHeight > glassHeight + 10) {
+                pouring = false;
+                endGame();
+                return; // Stop loop
+            }
+
+            // Draw Background
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const gx = glassX();
+            const gy = glassY();
+
+            // 1. Draw Stream (from tap)
+            if (pouring) {
+                ctx.fillStyle = '#f2c94c';
+                ctx.fillRect(canvas.width/2 - 5, 0, 10, gy + glassHeight - liquidHeight);
+                // Stream splash
+                ctx.beginPath();
+                ctx.arc(canvas.width/2, gy + glassHeight - liquidHeight, 8, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            // 2. Draw Beer Liquid
+            const currentLiquidH = Math.min(liquidHeight, glassHeight + 20); // Cap visual slightly
+            
+            if (liquidHeight > 0) {
+                // Beer Color
+                ctx.fillStyle = '#f2994a'; 
+                ctx.fillRect(gx + 5, gy + glassHeight - currentLiquidH, glassWidth - 10, currentLiquidH);
+                
+                // Foam
+                ctx.fillStyle = '#fff5e6';
+                ctx.fillRect(gx + 5, gy + glassHeight - currentLiquidH, glassWidth - 10, foamHeight);
+            }
+
+            // 3. Draw Bubbles
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            for(let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.y -= p.v;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                if (p.y < gy + glassHeight - liquidHeight) {
+                    particles.splice(i, 1); // remove if above liquid
+                }
+            }
+
+            // 4. Draw Glass (Foreground)
+            ctx.strokeStyle = '#cfaa68'; // Gold border
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(gx, gy);
+            ctx.lineTo(gx, gy + glassHeight);
+            ctx.lineTo(gx + glassWidth, gy + glassHeight);
+            ctx.lineTo(gx + glassWidth, gy);
+            ctx.stroke();
+
+            // Glass Highlights
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(gx + 10, gy + 20);
+            ctx.lineTo(gx + 10, gy + glassHeight - 10);
+            ctx.stroke();
+
+            // 5. Draw Tap (Simple)
+            ctx.fillStyle = '#444';
+            ctx.fillRect(canvas.width/2 - 15, -10, 30, 40);
+            ctx.fillStyle = '#cfaa68'; // Gold ring
+            ctx.fillRect(canvas.width/2 - 15, 25, 30, 5);
+
+            // 6. Draw "Target Line" (The 100% mark) - very faint
+            ctx.strokeStyle = 'rgba(200, 50, 50, 0.3)';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(gx - 20, gy);
+            ctx.lineTo(gx + glassWidth + 20, gy);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            if (state === 'PLAYING') {
+                requestAnimationFrame(loop);
+            }
+        }
+
+    </script>
+</body>
+</html>
