@@ -10,22 +10,27 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
     <div id="game-container">
         <div id="hud">SCORE: <span id="score-val">0</span></div>
+        
         <div style="position: absolute; top: 40px; right: 20px; z-index: 5; display: flex; gap: 10px;">
             <button id="open-lb-btn" class="hud-btn">🏆 排行榜</button>
             <button id="open-ach-btn" class="hud-btn">💀 成就</button>
         </div>
 
         <canvas id="gameCanvas"></canvas>
+        
         <div id="controls-hint">按住屏幕倒酒</div>
 
         <div id="start-screen" class="overlay">
             <h1>宫崎英高<br>摸鱼打酒日记</h1>
             <div class="subtitle">Miyazaki's Beer Pouring Diary</div>
+            
             <div class="input-group">
                 <input type="text" id="player-name-input" class="soul-input" placeholder="输入名字 (Enter Name)" maxlength="12">
             </div>
+
             <button id="start-btn" disabled>开始受苦 (START)</button>
         </div>
 
@@ -38,7 +43,7 @@
                 <button id="restart-btn">再次传火</button>
                 <button id="check-rank-btn">查看排行</button>
             </div>
-            <button id="result-ach-btn" style="margin-top: 10px; font-size: 0.9rem; padding: 10px 20px; border-color: #666; color: #888;">查看我的成就</button>
+            <button id="result-ach-btn" style="margin-top: 15px; font-size: 0.8rem; padding: 10px 20px; border-color: #555; color: #888;">查看我的成就</button>
         </div>
 
         <div id="leaderboard-panel" class="hidden panel-common">
@@ -69,6 +74,7 @@
                 <div id="ach-list"></div>
             </div>
         </div>
+        
         <div id="ach-toast">
             <div class="ach-icon">🏆</div>
             <div class="ach-info">
@@ -80,5 +86,4 @@
 
     <script src="game.js"></script>
 </body>
-</html>
 </html>
