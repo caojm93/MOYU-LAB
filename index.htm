@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <title>宫崎英高摸鱼打酒日记</title>
     
-    <link rel="stylesheet" href="style.css?v=20251212_v1">
-
-<script src="game.js?v=3.0"></script>
-    
+    <link rel="stylesheet" href="style.css?v=3.1">
 </head>
 <body>
 
@@ -29,6 +29,8 @@
         <div id="start-screen" class="overlay">
             <h1>宫崎英高<br>摸鱼打酒日记</h1>
             <div class="subtitle">Miyazaki's Beer Pouring Diary</div>
+            
+            <div style="font-size: 0.6rem; color: #555; margin-bottom: 15px;">Ver 3.1 (Stable)</div>
             
             <div class="input-group">
                 <input type="text" id="player-name-input" class="soul-input" placeholder="输入名字 (Enter Name)" maxlength="12">
@@ -55,7 +57,7 @@
             <button id="result-ach-btn" style="margin-top: 15px; font-size: 0.8rem; padding: 10px 20px; border-color: #555; color: #888;">查看我的成就</button>
         </div>
 
-       <div id="leaderboard-panel" class="hidden panel-common">
+        <div id="leaderboard-panel" class="hidden panel-common">
             <div class="lb-header">
                 <span>LEGENDS</span>
                 <span class="lb-close" onclick="closePanel('leaderboard-panel')">×</span>
@@ -73,6 +75,7 @@
                 </div>
                 <img src="ticket_qr.png" alt="扫码购票" class="lb-banner-qr">
             </div>
+
             <div class="lb-tabs">
                 <div class="lb-tab active" data-type="score" onclick="switchLb('score')">最高分 (Score)</div>
                 <div class="lb-tab" data-type="count" onclick="switchLb('count')">受苦榜 (Deaths)</div>
@@ -106,6 +109,6 @@
         </div>
     </div>
 
-    <script src="game.js"></script>
+    <script src="game.js?v=3.1"></script>
 </body>
 </html>
