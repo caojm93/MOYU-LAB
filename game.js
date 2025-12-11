@@ -5,6 +5,7 @@ const BMOB_APP_ID  = "909d88911b4256680a5bb5d9df1f84e2";
 const BMOB_API_KEY = "921bf8d038ac6e5a904e1fab0e8f7ac3";
 // ==========================================
 
+
 // --- 成就配置 ---
 const ACHIEVEMENTS = [
     { id: 'first_blood', icon: '🩸', title: '初次受苦',    desc: '第一次倒酒失败' },
@@ -13,7 +14,7 @@ const ACHIEVEMENTS = [
     { id: 'perfect',     icon: '🔥', title: '传火者',      desc: '单次得分超过 1200 分' },
     { id: 'godlike',     icon: '👑', title: '薪王化身',    desc: '单次得分超过 1450 分' },
     { id: 'limit',       icon: '⚡', title: '极限操作',    desc: '得分超过 1490 分' },
-    { id: 'break_limit', icon: '🚀', title: '界限突破',    desc: '突破物理法则！得分超过 1500 分' }, // 隐藏成就
+    { id: 'break_limit', icon: '🚀', title: '界限突破',    desc: '突破物理法则！得分超过 1500 分' },
     { id: 'greed',       icon: '😈', title: '贪婪的诅咒',  desc: '倒酒溢出 (失败)' },
     { id: 'tiny',        icon: '🤏', title: '深渊的凝视',  desc: '倒得太少 (<20%)' },
     { id: 'platinum',    icon: '🍸', title: '传说中的摸鱼王', desc: '找老板领取一杯 Shot！(全成就达成)' }
@@ -27,7 +28,11 @@ let particles = [];
 let currentPlayerName = localStorage.getItem('moyu_username') || "";
 let myPlayCount = parseInt(localStorage.getItem('moyu_playcount') || '0');
 let myUnlockedAch = JSON.parse(localStorage.getItem('moyu_achievements') || '[]');
-let currentLbType = 'score'; // 'score' 或 'count'
+let currentLbType = 'score'; 
+
+// ⚖️ 平衡性常量
+const TOLERANCE_PCT = 0.012; // 1.2% 的表面张力容错，所有分辨率一致
+const BASE_HEIGHT = 350;     // 用于标准化流速的基准高度
 
 // DOM 元素
 const canvas = document.getElementById('gameCanvas');
@@ -43,21 +48,28 @@ const scoreVal = document.getElementById('score-val');
 const nameInput = document.getElementById('player-name-input');
 const startBtn = document.getElementById('start-btn');
 
-// --- 初始化 ---
+// --- 初始化与适配 ---
 function resize() {
     canvasW = window.innerWidth;
     canvasH = window.innerHeight;
     canvas.width = canvasW;
     canvas.height = canvasH;
+    
+    // 动态调整杯子大小
     glassH = canvasH * 0.4;
+    // 限制一下横屏时的最大高度，防止杯子太大溢出屏幕
+    if (glassH > 500) glassH = 500;
+    
     glassW = glassH * 0.6;
     if (glassW > canvasW * 0.7) glassW = canvasW * 0.7;
+    
     glassX = canvasW / 2 - glassW / 2;
     glassY = canvasH * 0.75 - glassH;
 }
 window.addEventListener('resize', resize);
 resize();
 
+// 自动填充名字
 if(currentPlayerName) {
     nameInput.value = currentPlayerName;
     startBtn.disabled = false;
@@ -101,31 +113,38 @@ document.getElementById('open-ach-btn').addEventListener('click', (e) => { e.sto
 document.getElementById('result-ach-btn').addEventListener('click', (e) => { e.stopPropagation(); openPanel('achievement-panel'); });
 
 const container = document.getElementById('game-container');
+
 function handleStart(e) {
     const tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'BUTTON' || e.target.classList.contains('lb-close') || e.target.classList.contains('lb-tab') || e.target.closest('.panel-common')) return;
+    
     if(e.cancelable) e.preventDefault();
     if(!document.getElementById('leaderboard-panel').classList.contains('hidden')) return;
     if(!document.getElementById('achievement-panel').classList.contains('hidden')) return;
+
     if (state === 'PLAYING' && !pouring) {
         pouring = true;
         vibrate(20);
     }
 }
+
 function handleEnd(e) {
     const tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'BUTTON' || e.target.classList.contains('lb-close') || e.target.classList.contains('lb-tab')) return;
+    
     if(e.cancelable) e.preventDefault();
     if (state === 'PLAYING' && pouring) {
-        pouring = false;
+        pouring = false; 
     }
 }
+
 container.addEventListener('touchstart', handleStart, {passive: false});
 container.addEventListener('touchend', handleEnd, {passive: false});
 container.addEventListener('mousedown', handleStart);
 container.addEventListener('mouseup', handleEnd);
 
-// --- 游戏逻辑 ---
+// --- 游戏核心逻辑 ---
+
 function resetGame() {
     state = 'PLAYING';
     liquidHeight = 0; foamHeight = 0; pouring = false; flowRate = 0; particles = [];
@@ -139,6 +158,7 @@ function resetGame() {
 }
 
 function loop() {
+    // 1. 物理计算
     if (pouring && state === 'PLAYING') {
         flowRate = Math.min(flowRate + 0.15, 5.5); 
     } else {
@@ -147,9 +167,19 @@ function loop() {
             if (flowRate < 0) flowRate = 0;
         }
     }
+
     if (flowRate > 0 && state === 'PLAYING') {
-        liquidHeight += flowRate * 0.4;
+        // ⚖️ 核心修复：流速归一化
+        // 无论杯子多高，流速相对于杯子高度的比例保持一致
+        // glassH / BASE_HEIGHT 是缩放因子
+        const fillSpeed = flowRate * 0.4 * (glassH / BASE_HEIGHT);
+        
+        liquidHeight += fillSpeed;
+        
+        // 泡沫生长也做相应缩放
         foamHeight = Math.min(foamHeight + 0.2, glassH * 0.12);
+        
+        // 粒子
         if(Math.random() > (0.8 - flowRate * 0.1)) {
             particles.push({
                 x: glassX + 10 + Math.random() * (glassW - 20),
@@ -158,52 +188,71 @@ function loop() {
             });
         }
     }
-    if (state === 'PLAYING' && liquidHeight > glassH + 3) {
+
+    // 2. 状态判定
+    
+    // ⚖️ 核心修复：溢出判定使用百分比，而不是固定像素
+    // 1.012 即 1.2% 的容错
+    const maxSafeHeight = glassH * (1 + TOLERANCE_PCT);
+
+    if (state === 'PLAYING' && liquidHeight > maxSafeHeight) {
         pouring = false; flowRate = 0;
-        endGame(true);
+        endGame(true); // 溢出
         return;
     }
+    
     if (state === 'PLAYING' && !pouring && flowRate <= 0 && liquidHeight > 0) {
         endGame(false);
         return;
     }
-    // Render
+
+    // 3. 绘图渲染
     ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, canvasW, canvasH);
+    
     if (flowRate > 0.1) {
         let w = Math.max(1, flowRate * 2);
         ctx.fillStyle = '#f2c94c'; ctx.fillRect(canvasW/2 - w/2, 0, w, glassY + glassH - liquidHeight + 5);
     }
-    const curH = Math.min(liquidHeight, glassH + 20);
+    
+    const curH = Math.min(liquidHeight, glassH + 20); // 视觉上限制一下，防止泡沫飞出屏幕
     if (liquidHeight > 0) {
         ctx.fillStyle = '#f2994a'; ctx.fillRect(glassX + 6, glassY + glassH - curH, glassW - 12, curH);
         let bob = Math.sin(Date.now() / 150) * 1.5;
         ctx.fillStyle = '#fff5e6'; ctx.fillRect(glassX + 6, glassY + glassH - curH - bob, glassW - 12, foamHeight);
     }
+
     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     for(let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i]; p.y -= p.v;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
         if (p.y < glassY + glassH - liquidHeight) particles.splice(i, 1);
     }
+
     ctx.strokeStyle = '#cfaa68'; ctx.lineWidth = 5; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(glassX, glassY);
     ctx.lineTo(glassX, glassY + glassH); ctx.lineTo(glassX + glassW, glassY + glassH);
     ctx.lineTo(glassX + glassW, glassY); ctx.stroke();
+
     ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(glassX + glassW*0.15, glassY + glassH*0.1);
     ctx.lineTo(glassX + glassW*0.15, glassY + glassH - glassH*0.1); ctx.stroke();
+
     ctx.strokeStyle = 'rgba(200, 50, 50, 0.3)'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
     ctx.beginPath(); ctx.moveTo(0, glassY); ctx.lineTo(canvasW, glassY); ctx.stroke(); ctx.setLineDash([]);
+
     ctx.fillStyle = '#333'; ctx.fillRect(canvasW/2 - 20, -10, 40, 60);
     ctx.fillStyle = '#cfaa68'; ctx.fillRect(canvasW/2 - 20, 40, 40, 6);
+
     if (state === 'PLAYING') requestAnimationFrame(loop);
 }
 
-// --- 结算 ---
+// --- 结算系统 ---
+
 function endGame(spilled) {
     state = 'END';
-    // 表面张力逻辑：允许超过 100%
+    
     const fillRatio = liquidHeight / glassH; 
+
     let score = 0;
     let mainText="", cssClass="", flavorText="";
 
@@ -220,11 +269,15 @@ function endGame(spilled) {
         unlockAch('greed');
     } else {
         if (fillRatio >= 0.93) {
+            // 指数级算分
             const curve = Math.pow((fillRatio - 0.93) / 0.07, 4);
-            score = 1000 + Math.floor(curve * 500);
+            let baseScore = 1000 + Math.floor(curve * 500);
             
-            // 界限突破
-            if (score > 1500) {
+            // 随机波动分 (0-9) 防止分数完全一致
+            let luck = Math.floor(Math.random() * 10);
+            score = baseScore + luck;
+
+            if (score > 1510) {
                 mainText = "LIMIT BREAKER"; flavorText = "超越物理法则的神迹 (EX)"; cssClass = "success";
                 vibrate([50, 50, 50, 50, 50, 50, 50, 50]); 
                 unlockAch('break_limit'); unlockAch('godlike'); unlockAch('limit'); unlockAch('perfect');
@@ -261,9 +314,7 @@ function endGame(spilled) {
     resultScreen.classList.remove('hidden');
     setTimeout(() => { resultText.classList.add('show-result'); }, 50);
 
-    // 上传分数到流水表（保留历史记录）
     if(score > 0) uploadScore(score);
-    // 更新个人最佳到统计表（用于唯一排行榜）
     updatePlayerStats(score);
 }
 
@@ -317,7 +368,6 @@ function formatTime(iso) {
     return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes() < 10 ? '0'+d.getMinutes() : d.getMinutes()}`;
 }
 
-// 上传流水记录（后台留底用）
 function uploadScore(score) {
     if(BMOB_APP_ID.includes("填入")) { uploadStatus.innerText = "API Key 未配置"; return; }
     uploadStatus.innerText = "正在铭刻...";
@@ -328,7 +378,6 @@ function uploadScore(score) {
     }).then(() => uploadStatus.innerText = "分数已铭刻").catch(() => uploadStatus.innerText = "连接失败");
 }
 
-// ✅ 核心更新：更新个人最佳成绩和次数
 function updatePlayerStats(currentScore) {
     if(BMOB_APP_ID.includes("填入")) return;
     const headers = { 'Content-Type': 'application/json', 'X-Bmob-Application-Id': BMOB_APP_ID, 'X-Bmob-REST-API-Key': BMOB_API_KEY };
@@ -341,34 +390,21 @@ function updatePlayerStats(currentScore) {
             const entry = data.results[0];
             const objId = entry.objectId;
             const currentCount = entry.playCount || 0;
-            const historyHigh = entry.highScore || 0; // 获取历史最高
-            
-            // 比较本次分数是否更高
+            const historyHigh = entry.highScore || 0;
             const newHigh = Math.max(historyHigh, currentScore || 0);
 
             fetch(`https://api.bmobcloud.com/1/classes/PlayerStats/${objId}`, {
                 method: 'PUT', headers: headers,
-                body: JSON.stringify({ 
-                    playCount: currentCount + 1,
-                    highScore: newHigh // 更新最高分
-                })
+                body: JSON.stringify({ playCount: currentCount + 1, highScore: newHigh })
             });
         } else {
-            // 新用户
             fetch(`https://api.bmobcloud.com/1/classes/PlayerStats`, {
                 method: 'POST', headers: headers,
-                body: JSON.stringify({ 
-                    playerName: currentPlayerName, 
-                    playCount: 1,
-                    highScore: currentScore || 0
-                })
+                body: JSON.stringify({ playerName: currentPlayerName, playCount: 1, highScore: currentScore || 0 })
             });
         }
     });
 }
-
-// ✅ 核心更新：统一从 PlayerStats 读取排行榜
-// --- 替换 game.js 中的 fetchLeaderboard 函数 ---
 
 function fetchLeaderboard(type) {
     const list = document.getElementById('lb-content');
@@ -377,9 +413,9 @@ function fetchLeaderboard(type) {
 
     let url = "";
     if (type === 'score') {
-        url = "https://api.bmobcloud.com/1/classes/PlayerStats?order=-highScore&limit=50"; // 多取一点，方便前端去重
+        url = "https://api.bmobcloud.com/1/classes/PlayerStats?order=-highScore&limit=100";
     } else {
-        url = "https://api.bmobcloud.com/1/classes/PlayerStats?order=-playCount&limit=50";
+        url = "https://api.bmobcloud.com/1/classes/PlayerStats?order=-playCount&limit=100";
     }
 
     fetch(url, {
@@ -390,16 +426,15 @@ function fetchLeaderboard(type) {
         list.innerHTML = '';
         if(!data.results || data.results.length === 0) { list.innerHTML = '<div style="text-align:center;padding:20px;">暂无记录</div>'; return; }
         
-        // 🛠️ 前端去重逻辑：确保每个名字只出现一次
+        // 前端去重 + 过滤 0 分
         const uniqueMap = new Map();
         data.results.forEach(item => {
-            // 如果这个名字还没出现过，或者新数据的分数/次数更高，就存下来
-            if (!uniqueMap.has(item.playerName)) {
-                uniqueMap.set(item.playerName, item);
-            }
+            if (type === 'score' && (!item.highScore || item.highScore <= 0)) return;
+            if (!uniqueMap.has(item.playerName)) uniqueMap.set(item.playerName, item);
         });
-        // 转回数组并截取前 20 名
         const cleanList = Array.from(uniqueMap.values()).slice(0, 20);
+
+        if (cleanList.length === 0) { list.innerHTML = '<div style="text-align:center;padding:20px;color:#666">暂无记录</div>'; return; }
 
         cleanList.forEach((entry, i) => {
             let val = "";
