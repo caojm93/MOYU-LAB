@@ -3,582 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <title>宫崎英高摸鱼打酒日记</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Serif+SC:wght@400;700&display=swap');
-
-        :root {
-            --bg-color: #050505;
-            --ui-gold: #cfaa68;
-            --ui-red: #8a0e0e;
-            --text-grey: #a0a0a0;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-grey);
-            font-family: 'Cinzel', 'Noto Serif SC', serif;
-            margin: 0;
-            overflow: hidden; /* 禁止滚动 */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            height: 100dvh; /* 适配移动端动态高度 */
-            user-select: none; /* 禁止选中文本 */
-            -webkit-user-select: none;
-            touch-action: none; /* 禁止浏览器默认手势 */
-        }
-
-        #game-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        /* Canvas Layer */
-        canvas {
-            z-index: 1;
-            /* 确保 Canvas 不会触发长按菜单 */
-            -webkit-touch-callout: none;
-        }
-
-        /* UI Overlays */
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.9); /* 手机端背景更深一点 */
-            z-index: 10;
-            transition: opacity 0.3s;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        h1 {
-            font-size: 2rem; /* 移动端调小一点 */
-            color: var(--ui-gold);
-            text-shadow: 0 0 10px rgba(207, 170, 104, 0.3);
-            margin-bottom: 5px;
-            text-align: center;
-            letter-spacing: 2px;
-            line-height: 1.4;
-        }
-
-        .subtitle {
-            font-size: 0.8rem;
-            color: #666;
-            margin-bottom: 30px;
-            font-style: italic;
-            text-align: center;
-        }
-
-        button {
-            background: transparent;
-            border: 1px solid var(--ui-gold);
-            color: var(--ui-gold);
-            padding: 18px 50px; /* 更大的点击区域 */
-            font-family: 'Cinzel', serif;
-            font-size: 1.3rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            position: relative;
-            margin-top: 20px;
-            /* 消除移动端点击高亮 */
-            -webkit-tap-highlight-color: transparent; 
-        }
-
-        button:active {
-            background: rgba(207, 170, 104, 0.2);
-            transform: scale(0.98);
-        }
-
-        button::before, button::after {
-            content: '';
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: var(--ui-gold);
-        }
-        button::before { top: -3px; left: -3px; }
-        button::after { bottom: -3px; right: -3px; }
-
-        /* Game HUD */
-        #hud {
-            position: absolute;
-            top: 40px; /* 避开刘海屏 */
-            left: 20px;
-            z-index: 5;
-            font-size: 1rem;
-            color: var(--ui-gold);
-            font-weight: bold;
-        }
-
-        /* Result Text */
-        #result-text {
-            font-size: 3.5rem; /* 手机适配 */
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 15px;
-            opacity: 0;
-            transform: scale(1.3);
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            text-align: center;
-            line-height: 1;
-        }
-
-        .spilled {
-            color: var(--ui-red);
-            text-shadow: 0 0 15px rgba(138, 14, 14, 0.8);
-        }
-
-        .success {
-            color: var(--ui-gold);
-            text-shadow: 0 0 15px rgba(207, 170, 104, 0.8);
-        }
-
-        .show-result {
-            opacity: 1 !important;
-            transform: scale(1) !important;
-        }
-
-        /* Leaderboard - Mobile Optimized */
-        #leaderboard {
-            position: absolute;
-            top: 40px;
-            right: 20px;
-            text-align: right;
-            z-index: 5;
-            font-size: 0.8rem;
-            color: #666;
-            background: rgba(0,0,0,0.5);
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-        #leaderboard h3 { margin: 0 0 2px 0; color: var(--ui-gold); border-bottom: 1px solid #333;}
-
-        /* Achievement Popup - Mobile Top Style */
-        #achievement-popup {
-            position: fixed;
-            top: -100px; /* Hidden above */
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 350px;
-            background: rgba(20, 20, 20, 0.98);
-            border: 1px solid #444;
-            border-top: 3px solid var(--ui-gold);
-            padding: 12px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: top 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            z-index: 100;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            border-radius: 0 0 5px 5px;
-        }
-        
-        #achievement-popup.show {
-            top: 0;
-        }
-
-        .ach-icon {
-            width: 36px;
-            height: 36px;
-            background: #222;
-            border: 1px solid #555;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            flex-shrink: 0;
-        }
-
-        .ach-text h4 { margin: 0; color: var(--ui-gold); font-size: 0.9rem; }
-        .ach-text p { margin: 2px 0 0 0; font-size: 0.75rem; color: #aaa; }
-
-        /* Mobile controls hint */
-        #controls-hint {
-            position: absolute;
-            bottom: 8%;
-            width: 100%;
-            text-align: center;
-            color: #555;
-            font-size: 0.9rem;
-            z-index: 2;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            pointer-events: none;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
-        }
-
-    </style>
+    
+    <link rel="stylesheet" href="style.css?v=3.1">
 </head>
 <body>
 
     <div id="game-container">
         <div id="hud">SCORE: <span id="score-val">0</span></div>
-        <div id="leaderboard">
-            <h3>LEGENDS</h3>
-            <div id="high-scores">Loading...</div>
+        
+        <div style="position: absolute; top: 40px; right: 20px; z-index: 5; display: flex; gap: 10px;">
+            <button id="open-lb-btn" class="hud-btn">🏆 排行榜</button>
+            <button id="open-ach-btn" class="hud-btn">💀 成就</button>
         </div>
 
         <canvas id="gameCanvas"></canvas>
+        
         <div id="controls-hint">按住屏幕倒酒</div>
 
         <div id="start-screen" class="overlay">
             <h1>宫崎英高<br>摸鱼打酒日记</h1>
             <div class="subtitle">Miyazaki's Beer Pouring Diary</div>
-            <button id="start-btn">开始受苦</button>
-            <div style="margin-top:20px; color:#444; font-size: 0.7rem;">建议开启手机音量感受震动</div>
+            
+            <div style="font-size: 0.6rem; color: #555; margin-bottom: 15px;">Ver 3.1 (Stable)</div>
+            
+            <div class="input-group">
+                <input type="text" id="player-name-input" class="soul-input" placeholder="输入名字 (Enter Name)" maxlength="12">
+            </div>
+
+            <button id="start-btn" disabled>开始受苦 (START)</button>
         </div>
 
         <div id="result-screen" class="overlay hidden">
             <div id="result-text">YOU SPILLED</div>
-            <div id="result-detail" style="font-size: 1.2rem; margin-bottom: 20px; color: #ccc; text-align:center;">分数: 0</div>
-            <button id="restart-btn">再次传火</button>
+            <div id="result-detail">分数: 0</div>
+
+            <div class="qr-container">
+                <img src="qr.png" alt="Challenge" class="qr-code">
+                <div class="qr-hint">截图分享给朋友<br>邀请他们一起受苦</div>
+            </div>
+
+            <div id="upload-status" style="margin-bottom: 5px; font-size: 0.7rem; color: #666;"></div>
+            
+            <div class="btn-group">
+                <button id="restart-btn">再次传火</button>
+                <button id="check-rank-btn">查看排行</button>
+            </div>
+            <button id="result-ach-btn" style="margin-top: 15px; font-size: 0.8rem; padding: 10px 20px; border-color: #555; color: #888;">查看我的成就</button>
+        </div>
+
+        <div id="leaderboard-panel" class="hidden panel-common">
+            <div class="lb-header">
+                <span>LEGENDS</span>
+                <span class="lb-close" onclick="closePanel('leaderboard-panel')">×</span>
+            </div>
+            
+            <div class="lb-banner">
+                <div class="lb-banner-text">
+                    <div style="color: var(--ui-gold); font-weight: bold; margin-bottom: 2px;">摸鱼研究所·精酿啤酒 (天河南二路店)</div>
+                    <div style="color: #ccc; font-size: 0.75rem;">12.12 啜饮酿造·发行商特卖</div>
+                    <div style="margin-top: 4px;">
+                        <span style="color: #fff; font-weight: bold; font-size: 1rem;">¥168</span> 
+                        <span style="color: #888; font-size: 0.7rem;">/ 8杯</span>
+                    </div>
+                    <div style="color: var(--ui-red); font-size: 0.7rem; margin-top: 2px;">[ 扫码立即购票 ]</div>
+                </div>
+                <img src="ticket_qr.png" alt="扫码购票" class="lb-banner-qr">
+            </div>
+
+            <div class="lb-tabs">
+                <div class="lb-tab active" data-type="score" onclick="switchLb('score')">最高分 (Score)</div>
+                <div class="lb-tab" data-type="count" onclick="switchLb('count')">受苦榜 (Deaths)</div>
+            </div>
+            <div id="lb-content" class="lb-list">
+                <div class="lb-loading">正在召唤灵魂...</div>
+            </div>
+        </div>
+
+        <div id="achievement-panel" class="hidden panel-common">
+            <div class="lb-header">
+                <span>TROPHIES</span>
+                <span class="lb-close" onclick="closePanel('achievement-panel')">×</span>
+            </div>
+            <div class="ach-content">
+                <div class="stats-box">
+                    <div>当前传火者: <span id="stat-name" style="color:var(--ui-gold)">-</span></div>
+                    <div>累计受苦次数: <span id="stat-count" style="color:var(--ui-red)">0</span></div>
+                </div>
+                <hr style="border-color:#333; margin: 10px 0;">
+                <div id="ach-list"></div>
+            </div>
+        </div>
+        
+        <div id="ach-toast">
+            <div class="ach-icon">🏆</div>
+            <div class="ach-info">
+                <div class="ach-title">成就解锁</div>
+                <div class="ach-name" id="toast-name"></div>
+            </div>
         </div>
     </div>
 
-    <div id="achievement-popup">
-        <div class="ach-icon">🏆</div>
-        <div class="ach-text">
-            <h4 id="ach-title">Achievement Unlocked</h4>
-            <p id="ach-desc">Description here</p>
-        </div>
-    </div>
-
-    <script>
-        // --- 震动反馈封装 (Haptic Feedback) ---
-        function vibrate(pattern) {
-            if (navigator.vibrate) {
-                navigator.vibrate(pattern);
-            }
-        }
-
-        // Game Config
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        let canvasW, canvasH;
-        let glassW, glassH, glassX, glassY;
-
-        function resize() {
-            canvasW = window.innerWidth;
-            canvasH = window.innerHeight;
-            canvas.width = canvasW;
-            canvas.height = canvasH;
-            
-            // 动态计算杯子大小，适应不同屏幕
-            glassH = canvasH * 0.4; 
-            glassW = glassH * 0.6; 
-            if (glassW > canvasW * 0.7) { // 防止在小屏上太宽
-                glassW = canvasW * 0.7;
-            }
-            
-            glassX = canvasW / 2 - glassW / 2;
-            glassY = canvasH * 0.75 - glassH; // 稍微靠下一点
-        }
-        
-        window.addEventListener('resize', resize);
-        resize();
-
-        // Game State
-        let state = 'MENU';
-        let pouring = false;
-        
-        let liquidHeight = 0; 
-        let foamHeight = 0;
-        let flowRate = 0;
-        let particles = [];
-        const maxFlowRate = 5; // 手机上稍微调快一点流速节奏
-
-        // Achivements & Data
-        const achievements = [
-            { id: 'first_fail', title: '欢迎来到黑魂', desc: '第一次倒酒失败' },
-            { id: 'perfect', title: '赞美太阳', desc: '完美倒酒 (95%-99%)' },
-            { id: 'overflow', title: '贪婪的诅咒', desc: '啤酒溢出了杯子' },
-            { id: 'tiny', title: '深渊的凝视', desc: '倒了很少一点点酒' }
-        ];
-        let unlockedAch = JSON.parse(localStorage.getItem('moyu_achievements') || '[]');
-
-        // DOM Elements
-        const startScreen = document.getElementById('start-screen');
-        const resultScreen = document.getElementById('result-screen');
-        const resultText = document.getElementById('result-text');
-        const resultDetail = document.getElementById('result-detail');
-        const scoreVal = document.getElementById('score-val');
-        const startBtn = document.getElementById('start-btn');
-        const restartBtn = document.getElementById('restart-btn');
-
-        // --- 核心交互逻辑 (Touch + Mouse) ---
-        
-        function handleStart(e) {
-            if(e.cancelable) e.preventDefault(); // 禁止原生行为
-            if (state === 'PLAYING' && !pouring) {
-                pouring = true;
-                vibrate(20); // 轻微震动反馈
-            }
-        }
-
-        function handleEnd(e) {
-            if(e.cancelable) e.preventDefault();
-            if (state === 'PLAYING' && pouring) {
-                pouring = false;
-                endGame();
-            }
-        }
-
-        // 绑定事件到整个容器，防止按空
-        const container = document.getElementById('game-container');
-        
-        // Touch events (Mobile)
-        container.addEventListener('touchstart', handleStart, {passive: false});
-        container.addEventListener('touchend', handleEnd, {passive: false});
-        
-        // Mouse events (Desktop fallback)
-        container.addEventListener('mousedown', handleStart);
-        container.addEventListener('mouseup', handleEnd);
-
-        // Buttons
-        startBtn.addEventListener('click', (e) => { e.stopPropagation(); resetGame(); });
-        startBtn.addEventListener('touchend', (e) => { e.stopPropagation(); resetGame(); });
-        
-        restartBtn.addEventListener('click', (e) => { e.stopPropagation(); resetGame(); });
-        restartBtn.addEventListener('touchend', (e) => { e.stopPropagation(); resetGame(); });
-
-        function resetGame() {
-            state = 'PLAYING';
-            liquidHeight = 0;
-            foamHeight = 0;
-            pouring = false;
-            flowRate = 0;
-            particles = [];
-            scoreVal.innerText = '0';
-            
-            startScreen.classList.add('hidden');
-            resultScreen.classList.add('hidden');
-            resultText.classList.remove('show-result');
-            
-            vibrate(50); // 开始时的震动
-            loop();
-        }
-
-        function endGame() {
-            state = 'END';
-            const fillRatio = liquidHeight / glassH;
-            let score = 0;
-            let flavorText = "";
-            let cssClass = "";
-            let mainText = "";
-
-            if (fillRatio > 1.0) {
-                score = 0;
-                mainText = "YOU SPILLED";
-                flavorText = "贪婪蒙蔽了双眼";
-                cssClass = "spilled";
-                vibrate([50, 50, 200]); // 失败的长震动
-                triggerAchievement('overflow');
-                triggerAchievement('first_fail');
-            } else if (fillRatio >= 0.95) {
-                score = Math.floor(fillRatio * 1000) + 500;
-                mainText = "POUR RESTORED";
-                flavorText = "堪比防火女的技艺";
-                cssClass = "success";
-                vibrate([50, 100, 50, 100]); // 成功的双重震动
-                triggerAchievement('perfect');
-            } else if (fillRatio < 0.2) {
-                score = Math.floor(fillRatio * 100);
-                mainText = "HOLLOWED";
-                flavorText = "连余灰都不如";
-                cssClass = "spilled";
-                triggerAchievement('tiny');
-            } else {
-                score = Math.floor(fillRatio * 1000);
-                mainText = "BEER RETRIEVED";
-                flavorText = "平平无奇";
-                cssClass = "success";
-            }
-
-            saveScore(score);
-            updateLeaderboard();
-
-            resultText.innerText = mainText;
-            resultText.className = cssClass;
-            resultDetail.innerHTML = `得分: ${score}<br><span style="font-size:0.8rem; font-style:italic; display:block; margin-top:5px; opacity:0.7;">"${flavorText}"</span>`;
-            
-            resultScreen.classList.remove('hidden');
-            setTimeout(() => { resultText.classList.add('show-result'); }, 50);
-        }
-
-        function triggerAchievement(id) {
-            if (unlockedAch.includes(id)) return;
-            unlockedAch.push(id);
-            localStorage.setItem('moyu_achievements', JSON.stringify(unlockedAch));
-            
-            const ach = achievements.find(a => a.id === id);
-            if(ach) {
-                document.getElementById('ach-title').innerText = ach.title;
-                document.getElementById('ach-desc').innerText = ach.desc;
-                const popup = document.getElementById('achievement-popup');
-                popup.classList.add('show');
-                setTimeout(() => { popup.classList.remove('show'); }, 3000);
-            }
-        }
-
-        function saveScore(score) {
-            if(score === 0) return;
-            let scores = JSON.parse(localStorage.getItem('moyu_scores') || '[]');
-            scores.push(score);
-            scores.sort((a, b) => b - a);
-            scores = scores.slice(0, 5);
-            localStorage.setItem('moyu_scores', JSON.stringify(scores));
-        }
-
-        function updateLeaderboard() {
-            const list = document.getElementById('high-scores');
-            const scores = JSON.parse(localStorage.getItem('moyu_scores') || '[]');
-            if(scores.length === 0) {
-                list.innerHTML = "<div>暂无记录</div>";
-            } else {
-                list.innerHTML = scores.map((s, i) => `<div>#${i+1} ${s}</div>`).join('');
-            }
-        }
-        updateLeaderboard();
-
-        // --- RENDER LOOP ---
-        function loop() {
-            if (pouring && state === 'PLAYING') {
-                // 模拟水流抖动
-                let noise = (Math.random() - 0.5) * 1.5; 
-                flowRate = Math.min(flowRate + 0.2, maxFlowRate + noise);
-                
-                liquidHeight += flowRate * 0.4; 
-                foamHeight = Math.min(foamHeight + 0.3, glassH * 0.1);
-
-                // Bubbles
-                if(Math.random() > 0.4) {
-                    particles.push({
-                        x: glassX + 10 + Math.random() * (glassW - 20),
-                        y: glassY + glassH - liquidHeight,
-                        v: 2 + Math.random() * 3,
-                        size: 1 + Math.random() * 3
-                    });
-                }
-                
-                // 满的时候轻微震动提示（降低难度）
-                if (liquidHeight > glassH * 0.9 && liquidHeight < glassH * 0.92) {
-                   if (Math.random() > 0.8) vibrate(10);
-                }
-            } else {
-                flowRate = 0;
-            }
-
-            // Lose condition
-            if (state === 'PLAYING' && liquidHeight > glassH + 10) {
-                pouring = false;
-                endGame();
-                return;
-            }
-
-            // Draw Background
-            ctx.fillStyle = '#050505';
-            ctx.fillRect(0, 0, canvasW, canvasH);
-
-            // 1. Draw Stream
-            if (pouring) {
-                ctx.fillStyle = '#f2c94c';
-                ctx.fillRect(canvasW/2 - 4, 0, 8, glassY + glassH - liquidHeight + 5);
-            }
-
-            // 2. Draw Liquid
-            const currentLiquidH = Math.min(liquidHeight, glassH + 20);
-            if (liquidHeight > 0) {
-                ctx.fillStyle = '#f2994a'; 
-                ctx.fillRect(glassX + 6, glassY + glassH - currentLiquidH, glassW - 12, currentLiquidH);
-                
-                // Foam
-                ctx.fillStyle = '#fff5e6';
-                ctx.fillRect(glassX + 6, glassY + glassH - currentLiquidH, glassW - 12, foamHeight);
-            }
-
-            // 3. Bubbles
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-            for(let i = particles.length - 1; i >= 0; i--) {
-                let p = particles[i];
-                p.y -= p.v;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
-                if (p.y < glassY + glassH - liquidHeight) particles.splice(i, 1);
-            }
-
-            // 4. Glass Outline
-            ctx.strokeStyle = '#cfaa68';
-            ctx.lineWidth = 5;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(glassX, glassY);
-            ctx.lineTo(glassX, glassY + glassH); // 左
-            ctx.lineTo(glassX + glassW, glassY + glassH); // 底
-            ctx.lineTo(glassX + glassW, glassY); // 右
-            ctx.stroke();
-
-            // Glass Highlights
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(glassX + glassW*0.15, glassY + glassH*0.1);
-            ctx.lineTo(glassX + glassW*0.15, glassY + glassH - glassH*0.1);
-            ctx.stroke();
-
-            // 5. Target Line
-            ctx.strokeStyle = 'rgba(200, 50, 50, 0.5)';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(0, glassY);
-            ctx.lineTo(canvasW, glassY);
-            ctx.stroke();
-            ctx.setLineDash([]);
-
-            // 6. Tap
-            ctx.fillStyle = '#333';
-            ctx.fillRect(canvasW/2 - 20, -10, 40, 60);
-            ctx.fillStyle = '#cfaa68';
-            ctx.fillRect(canvasW/2 - 20, 40, 40, 6);
-
-            if (state === 'PLAYING') {
-                requestAnimationFrame(loop);
-            }
-        }
-    </script>
+    <script src="game.js?v=3.1"></script>
 </body>
 </html>
